@@ -4,7 +4,7 @@ export const metadata = {
   title: 'VisionMate — Real-Time PWD Accessibility Map',
   description: 'A crowdsourced real-time map helping wheelchair users and mobility-impaired individuals navigate safely.',
   icons: {
-    icon: '/logo.png',
+    icon: '/favicon.png',
     apple: '/logo.png',
   },
   openGraph: {
