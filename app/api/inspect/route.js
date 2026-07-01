@@ -4,6 +4,9 @@
 // exposed to the browser. Frontend calls /api/inspect instead.
 // ============================================================
 
+// Required for Cloudflare Pages deployment
+export const runtime = 'edge';
+
 const GEMINI_MODEL = 'gemini-2.0-flash';
 const GEMINI_URL   = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
