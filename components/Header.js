@@ -5,7 +5,7 @@ export default function Header({ countAccessible, countHazard }) {
     <header className="app-header" id="app-header">
       <div className="header-brand">
         <div className="header-logo">
-          <img src="/logo.png" alt="VisionMate Logo" width="36" height="36" style={{ borderRadius: '8px' }} />
+          <img src="/logo.png?v=3" alt="VisionMate Logo" width="36" height="36" style={{ borderRadius: '8px' }} />
         </div>
         <div>
           <span className="header-title">VisionMate</span>
