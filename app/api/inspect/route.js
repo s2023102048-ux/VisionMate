@@ -8,24 +8,12 @@
 export const runtime = 'edge';
 
 const GEMINI_MODEL = 'gemini-2.0-flash';
-const GEMINI_URL   = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${process.env.GEMINI_API_KEY}`;
-
-const SYSTEM_PROMPT = `You are an expert accessibility inspector for public infrastructure. 
-Your task is to evaluate photos of public pathways, sidewalks, ramps, and entrances for wheelchair users and mobility-impaired individuals.
-
-Analyze the provided image and respond in this EXACT format (no extra text):
-STATUS: ACCESSIBLE
-REASON: [One clear sentence explaining why the path is accessible or safe for wheelchair users.]
-
-OR:
-
-STATUS: HAZARD
-REASON: [One clear sentence explaining the specific barrier, obstacle, or hazard present.]
-
-Be concise and factual. Focus on: ramps, curb cuts, sidewalk condition, obstacles, door widths, steps, uneven surfaces, and pathway clearance.`;
 
 export async function POST(request) {
   try {
+    const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+    const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+
     const { base64, mimeType } = await request.json();
 
     if (!base64 || !mimeType) {
@@ -41,6 +29,20 @@ export async function POST(request) {
         { status: 500 }
       );
     }
+
+    const SYSTEM_PROMPT = `You are an expert accessibility inspector for public infrastructure.
+Your task is to evaluate photos of public pathways, sidewalks, ramps, and entrances for wheelchair users and mobility-impaired individuals.
+
+Analyze the provided image and respond in this EXACT format (no extra text):
+STATUS: ACCESSIBLE
+REASON: [One clear sentence explaining why the path is accessible or safe for wheelchair users.]
+
+OR:
+
+STATUS: HAZARD
+REASON: [One clear sentence explaining the specific barrier, obstacle, or hazard present.]
+
+Be concise and factual. Focus on: ramps, curb cuts, sidewalk condition, obstacles, door widths, steps, uneven surfaces, and pathway clearance.`;
 
     const requestBody = {
       contents: [
