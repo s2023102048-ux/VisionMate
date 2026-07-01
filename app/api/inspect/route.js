@@ -79,10 +79,22 @@ export async function POST(request) {
     const data    = await geminiResponse.json();
     const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
+    // Log the raw response for debugging
+    console.log('Gemini raw response:', rawText);
+
     const statusMatch = rawText.match(/STATUS:\s*(ACCESSIBLE|HAZARD)/i);
     const reasonMatch = rawText.match(/REASON:\s*(.+)/i);
 
-    const status      = statusMatch ? statusMatch[1].toUpperCase() : 'HAZARD';
+    // If Gemini didn't respond in the expected format, return an error
+    // instead of silently defaulting to HAZARD
+    if (!statusMatch) {
+      return Response.json(
+        { error: 'Gemini did not return a valid status. Raw: ' + rawText.slice(0, 200) },
+        { status: 502 }
+      );
+    }
+
+    const status      = statusMatch[1].toUpperCase();
     const description = reasonMatch
       ? reasonMatch[1].trim()
       : 'Unable to determine accessibility from the provided image.';
