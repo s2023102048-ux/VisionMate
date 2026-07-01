@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from 'react';
 
-// Helper: create custom Leaflet pin icon HTML
 function createPinIconHtml(status) {
   const colorClass = status === 'ACCESSIBLE' ? 'green' : status === 'HAZARD' ? 'red' : 'pending';
   const emoji      = status === 'ACCESSIBLE' ? '♿' : status === 'HAZARD' ? '⚠' : '📍';
@@ -14,7 +13,6 @@ function createPinIconHtml(status) {
     </div>`;
 }
 
-// Helper: build popup HTML for a report
 function buildPopupHTML(report) {
   const statusClass = report.status === 'ACCESSIBLE' ? 'accessible' : 'hazard';
   const statusLabel = report.status === 'ACCESSIBLE' ? '✅ Accessible' : '⚠️ Hazard';
@@ -43,19 +41,19 @@ function buildPopupHTML(report) {
     </div>`;
 }
 
-export default function Map({ reports, onMapClick }) {
-  const mapRef        = useRef(null);   // Leaflet map instance
-  const mapDivRef     = useRef(null);   // DOM div element
-  const pinMarkersRef = useRef({});     // docId → Leaflet marker
-  const tempPinRef    = useRef(null);   // Temp pin before submit
+export default function Map({ reports, onMapClick, destination, routeCoords, onLocationFound }) {
+  const mapRef        = useRef(null);
+  const mapDivRef     = useRef(null);
+  const pinMarkersRef = useRef({});
+  const tempPinRef    = useRef(null);
+  const destMarkerRef = useRef(null);
+  const routeLayerRef = useRef(null);
 
   // Initialize map once on mount
   useEffect(() => {
-    if (mapRef.current) return; // Already initialized
+    if (mapRef.current) return;
 
-    // Dynamically import Leaflet (browser-only)
     import('leaflet').then((L) => {
-      // Fix default icon paths broken by webpack
       delete L.Icon.Default.prototype._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
@@ -63,15 +61,13 @@ export default function Map({ reports, onMapClick }) {
         shadowUrl:     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
       });
 
-      // If container already has a map (React Strict Mode double-invoke), clean it up first
       if (mapDivRef.current && mapDivRef.current._leaflet_id) {
         mapDivRef.current._leaflet_id = null;
       }
-
       if (!mapDivRef.current) return;
 
       const map = L.map(mapDivRef.current, {
-        center:      [13.9780, 121.0807], // Tanauan, Batangas
+        center:      [13.9780, 121.0807],
         zoom:        15,
         zoomControl: false,
       });
@@ -85,8 +81,6 @@ export default function Map({ reports, onMapClick }) {
 
       map.on('click', (e) => {
         const { lat, lng } = e.latlng;
-
-        // Show temporary pin
         if (tempPinRef.current) map.removeLayer(tempPinRef.current);
         tempPinRef.current = L.marker([lat, lng], {
           icon: L.divIcon({
@@ -98,22 +92,23 @@ export default function Map({ reports, onMapClick }) {
           }),
           zIndexOffset: 1000,
         }).addTo(map);
-
         onMapClick(lat, lng);
       });
 
       mapRef.current = map;
 
-      // Try geolocation
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
-          (pos) => map.setView([pos.coords.latitude, pos.coords.longitude], 16),
+          (pos) => {
+            const { latitude: lat, longitude: lng } = pos.coords;
+            map.setView([lat, lng], 16);
+            if (onLocationFound) onLocationFound({ lat, lng });
+          },
           () => {}
         );
       }
     });
 
-    // Cleanup on unmount
     return () => {
       if (mapRef.current) {
         mapRef.current.remove();
@@ -122,10 +117,9 @@ export default function Map({ reports, onMapClick }) {
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Sync Firestore reports → Leaflet markers
+  // Sync reports → markers
   useEffect(() => {
     if (!mapRef.current || !reports) return;
-
     import('leaflet').then((L) => {
       const map        = mapRef.current;
       const pinMarkers = pinMarkersRef.current;
@@ -133,11 +127,7 @@ export default function Map({ reports, onMapClick }) {
 
       reports.forEach((report) => {
         seenIds.add(report.id);
-
-        // Remove existing marker to re-add with fresh popup
-        if (pinMarkers[report.id]) {
-          map.removeLayer(pinMarkers[report.id]);
-        }
+        if (pinMarkers[report.id]) map.removeLayer(pinMarkers[report.id]);
 
         const marker = L.marker([report.lat, report.lng], {
           icon: L.divIcon({
@@ -153,11 +143,9 @@ export default function Map({ reports, onMapClick }) {
           maxWidth: 280,
           className: 'visionmate-popup',
         });
-
         pinMarkers[report.id] = marker;
       });
 
-      // Remove deleted pins
       Object.keys(pinMarkers).forEach((id) => {
         if (!seenIds.has(id)) {
           map.removeLayer(pinMarkers[id]);
@@ -167,7 +155,56 @@ export default function Map({ reports, onMapClick }) {
     });
   }, [reports]);
 
-  // Expose method to remove temp pin (called after submit)
+  // Destination marker
+  useEffect(() => {
+    if (!mapRef.current) return;
+    import('leaflet').then((L) => {
+      const map = mapRef.current;
+      if (destMarkerRef.current) {
+        map.removeLayer(destMarkerRef.current);
+        destMarkerRef.current = null;
+      }
+      if (destination) {
+        destMarkerRef.current = L.marker([destination.lat, destination.lng], {
+          icon: L.divIcon({
+            className: '',
+            html: `<div class="dest-pin"><div class="dest-pin-head">🏁</div></div>`,
+            iconSize: [36, 44],
+            iconAnchor: [18, 44],
+          }),
+          zIndexOffset: 900,
+        })
+          .addTo(map)
+          .bindPopup(`<b>📍 ${destination.name.split(',')[0]}</b>`, { className: 'visionmate-popup' });
+
+        map.panTo([destination.lat, destination.lng]);
+      }
+    });
+  }, [destination]);
+
+  // Route polyline
+  useEffect(() => {
+    if (!mapRef.current) return;
+    import('leaflet').then((L) => {
+      const map = mapRef.current;
+      if (routeLayerRef.current) {
+        map.removeLayer(routeLayerRef.current);
+        routeLayerRef.current = null;
+      }
+      if (routeCoords && routeCoords.length > 1) {
+        // OSRM returns [lng, lat]; Leaflet needs [lat, lng]
+        const latlngs = routeCoords.map(([lng, lat]) => [lat, lng]);
+        routeLayerRef.current = L.polyline(latlngs, {
+          color:   '#7c4dff',
+          weight:  5,
+          opacity: 0.85,
+          lineCap: 'round',
+        }).addTo(map);
+        map.fitBounds(routeLayerRef.current.getBounds(), { padding: [60, 60] });
+      }
+    });
+  }, [routeCoords]);
+
   Map.removeTempPin = () => {
     if (tempPinRef.current && mapRef.current) {
       mapRef.current.removeLayer(tempPinRef.current);

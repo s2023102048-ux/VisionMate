@@ -7,19 +7,18 @@ import Header         from '../components/Header';
 import ReportModal    from '../components/ReportModal';
 import LoadingOverlay from '../components/LoadingOverlay';
 import Toast          from '../components/Toast';
+import SearchBar      from '../components/SearchBar';
+import NavPanel       from '../components/NavPanel';
 
 import { saveReport, listenToReports, uploadPhoto } from '../lib/firebase';
 
-// Load map with no SSR (Leaflet is browser-only)
 const Map = dynamic(() => import('../components/Map'), { ssr: false });
 
-// ── Utility: convert File → base64 ──────────────────────────
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => {
-      const dataUrl = reader.result;
-      const base64  = dataUrl.split(',')[1];
+      const base64 = reader.result.split(',')[1];
       resolve({ base64, mimeType: file.type || 'image/jpeg' });
     };
     reader.onerror = reject;
@@ -27,8 +26,27 @@ function fileToBase64(file) {
   });
 }
 
+// Distance (degrees) from point to route segment
+function distToSeg(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  if (dx === 0 && dy === 0) return Math.hypot(px - ax, py - ay);
+  const t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+
+// Check if a lat/lng is within ~maxMeters of any route segment
+function isNearRoute(lat, lng, routeCoords, maxMeters) {
+  const maxDeg = maxMeters / 111000;
+  for (let i = 0; i < routeCoords.length - 1; i++) {
+    const [ax, ay] = routeCoords[i];     // [lng, lat]
+    const [bx, by] = routeCoords[i + 1];
+    if (distToSeg(lng, lat, ax, ay, bx, by) < maxDeg) return true;
+  }
+  return false;
+}
+
 export default function HomePage() {
-  // ── State ──────────────────────────────────────────────────
+  // ── Report state ─────────────────────────────────────────
   const [reports,        setReports]        = useState([]);
   const [selectedLat,    setSelectedLat]    = useState(null);
   const [selectedLng,    setSelectedLng]    = useState(null);
@@ -36,35 +54,40 @@ export default function HomePage() {
   const [photoPreview,   setPhotoPreview]   = useState('');
   const [note,           setNote]           = useState('');
   const [isSelectingMode, setIsSelectingMode] = useState(false);
-
   const [modalVisible,   setModalVisible]   = useState(false);
   const [hintVisible,    setHintVisible]    = useState(false);
   const [loadingVisible, setLoadingVisible] = useState(false);
   const [loadingText,    setLoadingText]    = useState('');
-
-  const [aiStatus, setAiStatus] = useState('idle'); // 'idle'|'loading'|'done'
+  const [aiStatus, setAiStatus] = useState('idle');
   const [aiResult, setAiResult] = useState(null);
 
+  // ── Navigation state ──────────────────────────────────────
+  const [userLocation, setUserLocation] = useState(null);
+  const [destination,  setDestination]  = useState(null);
+  const [routeMode,    setRouteMode]    = useState('walk');
+  const [routeData,    setRouteData]    = useState(null);
+  const [routeCoords,  setRouteCoords]  = useState(null);
+  const [routeHazards, setRouteHazards] = useState([]);
+  const [navVisible,   setNavVisible]   = useState(false);
+
+  // ── Toast ─────────────────────────────────────────────────
   const [toast, setToast] = useState({ visible: false, message: '' });
   const toastTimerRef = useRef(null);
 
-  // Stats
   const countAccessible = reports.filter(r => r.status === 'ACCESSIBLE').length;
   const countHazard     = reports.filter(r => r.status === 'HAZARD').length;
 
-  // ── Firebase real-time listener ────────────────────────────
+  // ── Firebase listener ─────────────────────────────────────
   useEffect(() => {
     let unsub;
     try {
       unsub = listenToReports((data) => setReports(data));
     } catch (err) {
-      console.warn('Firebase not configured. Running in demo mode.', err);
-      showToast('⚠️ Firebase not configured — running in demo mode');
+      console.warn('Firebase not configured:', err);
     }
     return () => { if (unsub) unsub(); };
   }, []);
 
-  // ── Toast helper ───────────────────────────────────────────
   const showToast = useCallback((message, duration = 3500) => {
     setToast({ visible: true, message });
     clearTimeout(toastTimerRef.current);
@@ -74,11 +97,77 @@ export default function HomePage() {
     );
   }, []);
 
-  // ── Map click handler ──────────────────────────────────────
+  // ── Route calculation ──────────────────────────────────────
+  const calculateRoute = useCallback(async (dest, loc) => {
+    const origin = loc || userLocation;
+    if (!origin || !dest) return;
+
+    try {
+      const url =
+        `https://router.project-osrm.org/route/v1/foot/` +
+        `${origin.lng},${origin.lat};${dest.lng},${dest.lat}` +
+        `?overview=full&geometries=geojson&steps=true`;
+
+      const res  = await fetch(url);
+      const data = await res.json();
+
+      if (data.code !== 'Ok' || !data.routes.length) {
+        showToast('❌ Could not calculate route.');
+        return;
+      }
+
+      const route = data.routes[0];
+      const steps = route.legs?.[0]?.steps || [];
+      const coords = route.geometry.coordinates; // [[lng, lat], ...]
+
+      setRouteCoords(coords);
+      setRouteData({
+        distance: route.distance,
+        duration: route.duration,
+        steps,
+      });
+
+      // Find hazard reports near the route (within 80m)
+      const nearby = reports.filter(r =>
+        r.status === 'HAZARD' && isNearRoute(r.lat, r.lng, coords, 80)
+      );
+      setRouteHazards(nearby);
+    } catch (err) {
+      showToast('⚠️ Route unavailable. Check your connection.');
+      console.error('Route error:', err);
+    }
+  }, [userLocation, reports, showToast]);
+
+  // Re-calculate route when mode changes
+  useEffect(() => {
+    if (destination && userLocation) calculateRoute(destination, userLocation);
+  }, [routeMode]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Navigation handlers ───────────────────────────────────
+  const handleSelectLocation = useCallback((loc) => {
+    setDestination(loc);
+    setNavVisible(true);
+    setRouteData(null);
+    setRouteCoords(null);
+    calculateRoute(loc, userLocation);
+  }, [userLocation, calculateRoute]);
+
+  const handleClearSearch = useCallback(() => {
+    setDestination(null);
+    setNavVisible(false);
+    setRouteData(null);
+    setRouteCoords(null);
+    setRouteHazards([]);
+  }, []);
+
+  const handleCloseNav = useCallback(() => {
+    handleClearSearch();
+  }, [handleClearSearch]);
+
+  // ── Map click ─────────────────────────────────────────────
   const handleMapClick = useCallback((lat, lng) => {
     setSelectedLat(lat);
     setSelectedLng(lng);
-
     if (isSelectingMode) {
       setIsSelectingMode(false);
       setHintVisible(false);
@@ -88,7 +177,6 @@ export default function HomePage() {
     }
   }, [isSelectingMode, modalVisible]);
 
-  // ── Reset modal state ──────────────────────────────────────
   const resetModal = useCallback(() => {
     setSelectedFile(null);
     setPhotoPreview('');
@@ -97,17 +185,14 @@ export default function HomePage() {
     setAiResult(null);
   }, []);
 
-  // ── Close modal ────────────────────────────────────────────
   const handleCloseModal = useCallback(() => {
     setModalVisible(false);
     resetModal();
     setSelectedLat(null);
     setSelectedLng(null);
-    // Remove temp pin
     if (typeof Map.removeTempPin === 'function') Map.removeTempPin();
   }, [resetModal]);
 
-  // ── Reselect location ──────────────────────────────────────
   const handleReselect = useCallback(() => {
     setModalVisible(false);
     setIsSelectingMode(true);
@@ -117,7 +202,6 @@ export default function HomePage() {
     if (typeof Map.removeTempPin === 'function') Map.removeTempPin();
   }, []);
 
-  // ── Photo change ───────────────────────────────────────────
   const handlePhotoChange = useCallback((file) => {
     setSelectedFile(file);
     const reader = new FileReader();
@@ -127,19 +211,23 @@ export default function HomePage() {
     setAiResult(null);
   }, []);
 
-  // ── Submit report ──────────────────────────────────────────
+  const resetAndCleanup = useCallback(() => {
+    if (typeof Map.removeTempPin === 'function') Map.removeTempPin();
+    setSelectedLat(null);
+    setSelectedLng(null);
+    setModalVisible(false);
+    resetModal();
+  }, [resetModal]);
+
   const handleSubmit = useCallback(async () => {
     if (!selectedLat || !selectedFile) return;
-
     setModalVisible(false);
 
     try {
-      // Step 1: Prepare image for Gemini
       setLoadingText('Preparing image for AI inspection...');
       setLoadingVisible(true);
       const { base64, mimeType } = await fileToBase64(selectedFile);
 
-      // Step 2: Call our secure /api/inspect route (server-side)
       setLoadingText('Gemini AI is inspecting the photo...');
       setAiStatus('loading');
       let geminiResult;
@@ -151,42 +239,36 @@ export default function HomePage() {
         });
         if (!res.ok) throw new Error(`API error: ${res.status}`);
         geminiResult = await res.json();
+        if (geminiResult.error) throw new Error(geminiResult.error);
       } catch (geminiErr) {
         console.error('Gemini error:', geminiErr);
-        geminiResult = {
-          status:      'HAZARD',
-          description: 'AI inspection unavailable — report saved manually.',
-        };
+        geminiResult = { status: 'HAZARD', description: 'AI inspection unavailable — report saved manually.' };
       }
       setAiStatus('done');
       setAiResult(geminiResult);
 
-      // Step 3: Upload photo to Firebase Storage
-      setLoadingText('Uploading photo to cloud...');
+      setLoadingText('Uploading photo...');
       let photoUrl = '';
       try {
-        photoUrl = await uploadPhoto(selectedFile, (pct) => {
-          setLoadingText(`Uploading photo... ${pct}%`);
-        });
+        photoUrl = await uploadPhoto(selectedFile, (pct) => setLoadingText(`Uploading photo... ${pct}%`));
       } catch (uploadErr) {
         console.error('Upload error:', uploadErr);
         showToast('⚠️ Photo upload failed — report saved without photo.');
       }
 
-      // Step 4: Save to Firestore
       setLoadingText('Saving report...');
       try {
         await saveReport({
           lat:         selectedLat,
           lng:         selectedLng,
-          photoUrl:    photoUrl,
+          photoUrl,
           status:      geminiResult.status,
           description: geminiResult.description,
           note:        note.trim(),
         });
       } catch (firestoreErr) {
         console.error('Firestore error:', firestoreErr);
-        showToast('⚠️ Saved locally (database unreachable). Check Firebase config.');
+        showToast('⚠️ Database unreachable. Check Firebase config.');
         setLoadingVisible(false);
         resetAndCleanup();
         return;
@@ -196,23 +278,13 @@ export default function HomePage() {
       const emoji = geminiResult.status === 'ACCESSIBLE' ? '♿✅' : '🚧⚠️';
       showToast(`${emoji} Report pinned — ${geminiResult.status}`);
       resetAndCleanup();
-
     } catch (err) {
       console.error('Submit error:', err);
       setLoadingVisible(false);
       showToast('❌ Something went wrong. Please try again.');
     }
-  }, [selectedLat, selectedLng, selectedFile, note, showToast]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedLat, selectedLng, selectedFile, note, showToast, resetAndCleanup]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const resetAndCleanup = useCallback(() => {
-    if (typeof Map.removeTempPin === 'function') Map.removeTempPin();
-    setSelectedLat(null);
-    setSelectedLng(null);
-    setModalVisible(false);
-    resetModal();
-  }, [resetModal]);
-
-  // ── Open modal from FAB ─────────────────────────────────────
   const handleFabClick = () => {
     setModalVisible(true);
     if (!selectedLat) setHintVisible(true);
@@ -222,7 +294,15 @@ export default function HomePage() {
     <>
       <Header countAccessible={countAccessible} countHazard={countHazard} />
 
-      <Map reports={reports} onMapClick={handleMapClick} />
+      <SearchBar onSelectLocation={handleSelectLocation} onClear={handleClearSearch} />
+
+      <Map
+        reports={reports}
+        onMapClick={handleMapClick}
+        destination={destination}
+        routeCoords={routeCoords}
+        onLocationFound={setUserLocation}
+      />
 
       {/* FAB Report Button */}
       <button className="fab" id="btn-report" title="Report an accessibility issue" onClick={handleFabClick}>
@@ -243,6 +323,18 @@ export default function HomePage() {
         </div>
       )}
 
+      {/* Navigation Panel */}
+      {navVisible && (
+        <NavPanel
+          destination={destination}
+          routeData={routeData}
+          routeMode={routeMode}
+          hazards={routeHazards}
+          onModeChange={(mode) => { setRouteMode(mode); }}
+          onClose={handleCloseNav}
+        />
+      )}
+
       <ReportModal
         visible={modalVisible}
         selectedLat={selectedLat}
@@ -260,7 +352,6 @@ export default function HomePage() {
       />
 
       <LoadingOverlay visible={loadingVisible} text={loadingText} />
-
       <Toast visible={toast.visible} message={toast.message} />
     </>
   );
