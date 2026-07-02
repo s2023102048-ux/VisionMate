@@ -40,6 +40,12 @@ function buildPopupHTML(report) {
     ? `<p class="popup-note">"${report.note}"</p>`
     : '';
 
+  const deleteBtn = `
+    <button class="btn-delete-report" data-id="${report.id}" style="width: 100%; margin-top: 10px; background: rgba(255,82,82,0.15); border: 1px solid rgba(255,82,82,0.3); color: #ff5252; padding: 6px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: background 0.2s;">
+      🗑️ Delete Report
+    </button>
+  `;
+
   return `
     <div class="popup-content">
       ${photo}
@@ -48,11 +54,12 @@ function buildPopupHTML(report) {
         <p class="popup-desc">${report.description}</p>
         ${noteHtml}
         <span class="popup-time">🕐 ${ts}</span>
+        ${deleteBtn}
       </div>
     </div>`;
 }
 
-export default function Map({ reports, onMapClick, destination, routeCoords, onLocationFound }) {
+export default function Map({ reports, onMapClick, destination, routeCoords, onLocationFound, onDeleteReport }) {
   const mapRef        = useRef(null);
   const mapDivRef     = useRef(null);
   const pinMarkersRef = useRef({});
@@ -188,6 +195,21 @@ export default function Map({ reports, onMapClick, destination, routeCoords, onL
           maxWidth: 280,
           className: 'visionmate-popup',
         });
+
+        marker.on('popupopen', (e) => {
+          const popupNode = e.popup._contentNode;
+          if (!popupNode) return;
+          const btn = popupNode.querySelector('.btn-delete-report');
+          if (btn) {
+            btn.onclick = () => {
+              if (window.confirm('Are you sure you want to delete this report?')) {
+                if (onDeleteReport) onDeleteReport(report.id);
+                map.closePopup();
+              }
+            };
+          }
+        });
+
         pinMarkers[report.id] = marker;
       });
 

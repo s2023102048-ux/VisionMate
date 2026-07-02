@@ -14,7 +14,7 @@ import OnboardingModal from '../components/OnboardingModal';
 import SettingsPanel   from '../components/SettingsPanel';
 import AiStatusBar     from '../components/AiStatusBar';
 
-import { saveReport, listenToReports, uploadPhoto } from '../lib/firebase';
+import { saveReport, listenToReports, uploadPhoto, deleteReport } from '../lib/firebase';
 
 const Map = dynamic(() => import('../components/Map'), { ssr: false });
 
@@ -104,6 +104,16 @@ export default function HomePage() {
       duration
     );
   }, []);
+
+  const handleDeleteReport = useCallback(async (id) => {
+    try {
+      await deleteReport(id);
+      showToast('🗑️ Report deleted successfully');
+    } catch (e) {
+      console.error(e);
+      showToast('⚠️ Failed to delete report');
+    }
+  }, [showToast]);
 
   // ── Route calculation ──────────────────────────────────────
   const calculateRoute = useCallback(async (dest, loc) => {
@@ -338,10 +348,11 @@ export default function HomePage() {
         destination={destination}
         routeCoords={routeCoords}
         onLocationFound={setUserLocation}
+        onDeleteReport={handleDeleteReport}
       />
 
       {/* Settings Panel */}
-      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} reports={reports} />
+      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
       {/* AI Status Bar */}
       <AiStatusBar />
