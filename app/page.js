@@ -308,7 +308,7 @@ export default function HomePage() {
           severity:    geminiResult.severity || 'Dangerous',
           rating:      geminiResult.rating   || null,
           description: geminiResult.description,
-          category:    category === 'Others' ? (otherText || 'Others') : (category || geminiResult.category || 'Others'),
+          category:    geminiResult.category || (category === 'Others' ? otherText : category) || 'Others',
         });
       } catch (firestoreErr) {
         console.error('Firestore error:', firestoreErr);
