@@ -111,7 +111,7 @@ export default function Map({ reports, onMapClick, destination, routeCoords, onL
           const el = tempPinRef.current?.getElement();
           if (el) el.style.transition = 'none';
           const pin = tempPinRef.current?.getElement()?.querySelector('.pin-head');
-          if (pin) { pin.style.transform = 'scale(1.25)'; pin.style.boxShadow = '0 8px 24px rgba(124,77,255,0.7)'; }
+          if (pin) { pin.style.transform = 'scale(1.25) rotate(-45deg)'; pin.style.boxShadow = '0 8px 24px rgba(124,77,255,0.7)'; }
         });
 
         tempPinRef.current.on('drag', () => {
