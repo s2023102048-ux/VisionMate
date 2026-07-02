@@ -13,6 +13,7 @@ import EmergencyButton from '../components/EmergencyButton';
 import OnboardingModal from '../components/OnboardingModal';
 import SettingsPanel   from '../components/SettingsPanel';
 import AiStatusBar     from '../components/AiStatusBar';
+import AuthModal       from '../components/AuthModal';
 
 import { saveReport, listenToReports, uploadPhoto, deleteReport } from '../lib/firebase';
 
@@ -343,6 +344,9 @@ export default function HomePage() {
 
   return (
     <>
+      {/* Authentication & Profile setup */}
+      <AuthModal />
+
       {/* First-time onboarding */}
       <OnboardingModal />
 
