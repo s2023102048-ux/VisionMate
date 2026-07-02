@@ -6,9 +6,12 @@ export default function NavPanel({ destination, routeData, routeMode, onModeChan
   const formatDist = (m) =>
     m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.round(m)} m`;
 
-  const formatTime = (s) => {
-    const base = Math.round(s / 60);
-    const mins = routeMode === 'wheelchair' ? Math.round(base * 1.4) : base;
+  const formatTime = (distMeters) => {
+    // Average walking speed: ~1.4 m/s (5 km/h)
+    // Average wheelchair speed: ~1.0 m/s (3.6 km/h)
+    const speed = routeMode === 'wheelchair' ? 1.0 : 1.4;
+    const mins = Math.round((distMeters / speed) / 60);
+    
     return mins >= 60
       ? `${Math.floor(mins / 60)}h ${mins % 60}m`
       : `${mins} min`;
@@ -63,7 +66,7 @@ export default function NavPanel({ destination, routeData, routeMode, onModeChan
             </div>
             <div className="nav-info-item">
               <span className="nav-info-label">Est. Time</span>
-              <span className="nav-info-value">{formatTime(routeData.duration)}</span>
+              <span className="nav-info-value">{formatTime(routeData.distance)}</span>
             </div>
             <div className={`nav-info-item risk-${riskLevel}`}>
               <span className="nav-info-label">Safety</span>
