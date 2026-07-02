@@ -1,5 +1,9 @@
 'use client';
 
+// Disable static pre-rendering — firebase packages are browser-only
+// and crash Turbopack/Edge runtime during build-time prerender.
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 
