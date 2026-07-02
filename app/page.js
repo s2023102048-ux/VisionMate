@@ -11,6 +11,7 @@ import SearchBar       from '../components/SearchBar';
 import NavPanel        from '../components/NavPanel';
 import EmergencyButton from '../components/EmergencyButton';
 import OnboardingModal from '../components/OnboardingModal';
+import AiStatusBar     from '../components/AiStatusBar';
 
 import { saveReport, listenToReports, uploadPhoto } from '../lib/firebase';
 
@@ -333,6 +334,9 @@ export default function HomePage() {
         routeCoords={routeCoords}
         onLocationFound={setUserLocation}
       />
+
+      {/* AI Status Bar */}
+      <AiStatusBar />
 
       {/* SOS Emergency Button */}
       <EmergencyButton userLocation={userLocation} />
