@@ -72,8 +72,9 @@ You must respond ONLY with a valid JSON object exactly matching the structure be
       },
     };
 
-    // Retry logic: up to 3 attempts, 3s wait on 429
-    const MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+    // Retry logic: up to 2 attempts per model, 3s wait on 429
+    // gemini-2.0-flash-lite has 30 RPM (vs 15 RPM for 2.0-flash)
+    const MODELS = ['gemini-2.0-flash', 'gemini-2.0-flash-lite'];
     let geminiResponse;
     let lastStatus = 0;
 
