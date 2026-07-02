@@ -46,6 +46,17 @@ function buildPopupHTML(report) {
     </button>
   `;
 
+  const navBtns = `
+    <div style="display: flex; gap: 8px; margin-top: 10px;">
+      <button class="btn-nav-walk" data-lat="${report.lat}" data-lng="${report.lng}" style="flex: 1; background: rgba(124,77,255,0.15); border: 1px solid rgba(124,77,255,0.3); color: #7c4dff; padding: 6px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: bold; transition: all 0.2s;">
+        🚶 Walk
+      </button>
+      <button class="btn-nav-wheelchair" data-lat="${report.lat}" data-lng="${report.lng}" style="flex: 1; background: rgba(0,230,118,0.15); border: 1px solid rgba(0,230,118,0.3); color: #00e676; padding: 6px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: bold; transition: all 0.2s;">
+        ♿ Wheelchair
+      </button>
+    </div>
+  `;
+
   return `
     <div class="popup-content">
       ${photo}
@@ -54,12 +65,13 @@ function buildPopupHTML(report) {
         <p class="popup-desc">${report.description}</p>
         ${noteHtml}
         <span class="popup-time">🕐 ${ts}</span>
+        ${navBtns}
         ${deleteBtn}
       </div>
     </div>`;
 }
 
-export default function Map({ reports, onMapClick, destination, routeCoords, onLocationFound, onDeleteReport }) {
+export default function Map({ reports, onMapClick, destination, routeCoords, onLocationFound, onDeleteReport, onNavigateTo }) {
   const mapRef        = useRef(null);
   const mapDivRef     = useRef(null);
   const pinMarkersRef = useRef({});
@@ -199,13 +211,32 @@ export default function Map({ reports, onMapClick, destination, routeCoords, onL
         marker.on('popupopen', (e) => {
           const popupNode = e.popup._contentNode;
           if (!popupNode) return;
-          const btn = popupNode.querySelector('.btn-delete-report');
-          if (btn) {
-            btn.onclick = () => {
+
+          // Delete button
+          const btnDel = popupNode.querySelector('.btn-delete-report');
+          if (btnDel) {
+            btnDel.onclick = () => {
               if (window.confirm('Are you sure you want to delete this report?')) {
                 if (onDeleteReport) onDeleteReport(report.id);
                 map.closePopup();
               }
+            };
+          }
+
+          // Navigation buttons
+          const btnWalk = popupNode.querySelector('.btn-nav-walk');
+          const btnWheel = popupNode.querySelector('.btn-nav-wheelchair');
+          
+          if (btnWalk) {
+            btnWalk.onclick = () => {
+              if (onNavigateTo) onNavigateTo(report, 'walk');
+              map.closePopup();
+            };
+          }
+          if (btnWheel) {
+            btnWheel.onclick = () => {
+              if (onNavigateTo) onNavigateTo(report, 'wheelchair');
+              map.closePopup();
             };
           }
         });
