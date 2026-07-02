@@ -92,9 +92,9 @@ export default function AiStatusBar() {
               <span style={{ fontSize: '0.85rem', flexShrink: 0, marginTop: '1px' }}>
                 {s.status === 'pass' ? '✅' : '❌'}
               </span>
-              <div>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#333', marginBottom: '2px' }}>{s.step}</div>
-                <div style={{ fontSize: '0.72rem', color: '#666', lineHeight: 1.4 }}>{s.detail}</div>
+                <div style={{ fontSize: '0.72rem', color: '#666', lineHeight: 1.4, wordBreak: 'break-word', overflowWrap: 'anywhere' }}>{s.detail}</div>
               </div>
             </div>
           ))}
