@@ -1,158 +1,183 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { app, db } from '../lib/firebase';
-import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-const auth = typeof window !== 'undefined' ? getAuth(app) : null;
-const googleProvider = typeof window !== 'undefined' ? new GoogleAuthProvider() : null;
+// ⚠️ firebase/auth CANNOT be statically imported — Turbopack/Edge Runtime crashes.
+// We dynamically import it ONLY inside useEffect (client side only).
 
 export default function AuthModal() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser]           = useState(undefined); // undefined = not yet determined
   const [needsProfile, setNeedsProfile] = useState(false);
+  const [name,    setName]        = useState('');
+  const [contact, setContact]     = useState('');
+  const [agreed,  setAgreed]      = useState(false);
+  const [saving,  setSaving]      = useState(false);
 
-  // Form states
-  const [name, setName] = useState('');
-  const [contact, setContact] = useState('');
-  const [agreed, setAgreed] = useState(false);
-  const [saving, setSaving] = useState(false);
-
+  // Dynamically load firebase/auth after mount (client only)
   useEffect(() => {
-    if (!auth) return;
-    const unsub = onAuthStateChanged(auth, async (u) => {
-      setUser(u);
-      if (u) {
-        // Check if user has a profile in Firestore
-        const userDoc = await getDoc(doc(db, 'users', u.uid));
-        if (!userDoc.exists()) {
-          setNeedsProfile(true);
-          setName(u.displayName || '');
+    let unsubscribe;
+
+    (async () => {
+      const { getAuth, GoogleAuthProvider, onAuthStateChanged } = await import('firebase/auth');
+      const auth = getAuth(app);
+
+      unsubscribe = onAuthStateChanged(auth, async (u) => {
+        setUser(u || null);
+        if (u) {
+          const snap = await getDoc(doc(db, 'users', u.uid));
+          if (!snap.exists()) {
+            setNeedsProfile(true);
+            setName(u.displayName || '');
+          } else {
+            setNeedsProfile(false);
+          }
         } else {
           setNeedsProfile(false);
         }
-      } else {
-        setNeedsProfile(false);
-      }
-      setLoading(false);
-    });
-    return () => unsub();
+      });
+    })();
+
+    return () => { if (unsubscribe) unsubscribe(); };
   }, []);
 
   const handleGoogleSignIn = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
-    } catch (error) {
-      console.error("Sign in failed:", error);
-      alert('Failed to sign in. Check console for details.');
+      const { getAuth, GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
+      const auth = getAuth(app);
+      await signInWithPopup(auth, new GoogleAuthProvider());
+    } catch (err) {
+      console.error('Sign-in error:', err);
+      alert('Failed to sign in. Please try again.');
     }
+  };
+
+  const handleSignOut = async () => {
+    const { getAuth, signOut } = await import('firebase/auth');
+    await signOut(getAuth(app));
   };
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
     if (!name || !contact || !agreed) return;
-
     setSaving(true);
     try {
       await setDoc(doc(db, 'users', user.uid), {
         name,
         emergencyContact: contact,
         email: user.email,
-        createdAt: new Date()
+        photoURL: user.photoURL || '',
+        createdAt: new Date(),
       });
       setNeedsProfile(false);
     } catch (err) {
-      console.error('Failed to save profile:', err);
+      console.error('Save profile error:', err);
       alert('Failed to save profile. See console.');
     }
     setSaving(false);
   };
 
-  // If loading or already logged in with a profile, hide the modal entirely.
-  if (loading || (user && !needsProfile)) return null;
+  // undefined = still loading auth state, don't flash anything
+  if (user === undefined) return null;
+
+  // Logged in and profile complete — nothing to show
+  if (user && !needsProfile) return null;
 
   return (
     <div style={{
       position: 'fixed', inset: 0, zIndex: 9999,
-      background: 'rgba(7,11,20,0.85)', backdropFilter: 'blur(8px)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
+      background: 'rgba(7,11,20,0.88)', backdropFilter: 'blur(10px)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px',
     }}>
       <div style={{
-        background: 'rgba(15,20,35,0.95)', border: '1px solid rgba(124,77,255,0.3)',
-        borderRadius: '20px', padding: '30px', width: '100%', maxWidth: '400px',
-        color: '#fff', boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
-        animation: 'slideUp 0.3s ease'
+        background: 'rgba(15,20,35,0.98)', border: '1px solid rgba(124,77,255,0.25)',
+        borderRadius: '20px', padding: '32px 28px', width: '100%', maxWidth: '400px',
+        color: '#fff', boxShadow: '0 20px 60px rgba(0,0,0,0.6)',
+        animation: 'slideUp 0.3s ease',
       }}>
         {!user ? (
-          // Step 1: Login
+          /* ── Step 1: Sign in ── */
           <div style={{ textAlign: 'center' }}>
-            <h2 style={{ margin: '0 0 10px', fontSize: '1.4rem' }}>Welcome to VisionMate</h2>
-            <p style={{ color: '#aaa', fontSize: '0.9rem', marginBottom: '30px' }}>
-              Sign in to contribute to the PWD accessibility map and alert emergency contacts.
+            <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>♿</div>
+            <h2 style={{ margin: '0 0 8px', fontSize: '1.4rem', fontWeight: 700 }}>Welcome to VisionMate</h2>
+            <p style={{ color: '#999', fontSize: '0.88rem', marginBottom: '28px', lineHeight: 1.5 }}>
+              Sign in to contribute accessibility reports and enable emergency contact features.
             </p>
-            <button 
-              onClick={handleGoogleSignIn}
-              style={{
-                width: '100%', padding: '14px', borderRadius: '12px',
-                background: '#fff', color: '#000', border: 'none',
-                fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'
-              }}
-            >
-              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20" alt="G" />
-              Sign in with Google
+            <button onClick={handleGoogleSignIn} style={{
+              width: '100%', padding: '14px 20px', borderRadius: '12px',
+              background: '#fff', color: '#1a1a1a', border: 'none',
+              fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
+              transition: 'transform 0.15s',
+            }}>
+              <img
+                src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
+                width="20" height="20" alt="Google"
+              />
+              Continue with Google
             </button>
           </div>
         ) : (
-          // Step 2: Complete Profile
-          <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <div style={{ textAlign: 'center', marginBottom: '10px' }}>
-              <h2 style={{ margin: '0 0 5px', fontSize: '1.3rem' }}>Complete Profile</h2>
-              <p style={{ color: '#aaa', fontSize: '0.85rem', margin: 0 }}>Almost there! We just need a few details.</p>
+          /* ── Step 2: Complete profile ── */
+          <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ textAlign: 'center', marginBottom: '4px' }}>
+              {user.photoURL && (
+                <img src={user.photoURL} alt="avatar" style={{ width: 52, height: 52, borderRadius: '50%', marginBottom: 10 }} />
+              )}
+              <h2 style={{ margin: '0 0 4px', fontSize: '1.2rem', fontWeight: 700 }}>Complete Your Profile</h2>
+              <p style={{ color: '#888', fontSize: '0.82rem', margin: 0 }}>Signed in as {user.email}</p>
             </div>
 
             <div>
               <label style={labelStyle}>Full Name</label>
-              <input 
+              <input
                 type="text" required value={name} onChange={e => setName(e.target.value)}
-                style={inputStyle} placeholder="Juan Dela Cruz"
+                placeholder="Juan Dela Cruz" style={inputStyle}
               />
             </div>
 
             <div>
               <label style={labelStyle}>Family Emergency Contact No.</label>
-              <input 
+              <input
                 type="tel" required value={contact} onChange={e => setContact(e.target.value)}
-                style={inputStyle} placeholder="0912 345 6789"
+                placeholder="0912 345 6789" style={inputStyle}
               />
-              <p style={{ margin: '4px 0 0', fontSize: '0.7rem', color: '#888' }}>
-                Used only if you press the SOS Emergency Button.
+              <p style={{ margin: '5px 0 0', fontSize: '0.72rem', color: '#777' }}>
+                This number will be alerted when you press the SOS button.
               </p>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', marginTop: '10px' }}>
-              <input 
-                type="checkbox" id="privacy" required checked={agreed} onChange={e => setAgreed(e.target.checked)}
-                style={{ marginTop: '4px', transform: 'scale(1.2)' }}
+            <label style={{ display: 'flex', gap: '10px', cursor: 'pointer', marginTop: '4px', alignItems: 'flex-start' }}>
+              <input
+                type="checkbox" required checked={agreed} onChange={e => setAgreed(e.target.checked)}
+                style={{ marginTop: 3, transform: 'scale(1.2)', accentColor: '#7c4dff', flexShrink: 0 }}
               />
-              <label htmlFor="privacy" style={{ fontSize: '0.8rem', color: '#ccc', lineHeight: 1.4 }}>
-                I agree to the <span style={{ color: '#7c4dff', textDecoration: 'underline' }}>Privacy Policy</span> and consent to VisionMate using my data to provide routing and emergency features.
-              </label>
-            </div>
+              <span style={{ fontSize: '0.8rem', color: '#ccc', lineHeight: 1.5 }}>
+                I have read and agree to the{' '}
+                <span style={{ color: '#7c4dff', textDecoration: 'underline', cursor: 'pointer' }}>Privacy Policy</span>.
+                I consent to VisionMate collecting my name and emergency contact for accessibility and safety purposes.
+              </span>
+            </label>
 
-            <button 
+            <button
+              type="submit"
               disabled={!agreed || !name || !contact || saving}
               style={{
-                width: '100%', padding: '14px', borderRadius: '12px', marginTop: '10px',
-                background: (!agreed || !name || !contact || saving) ? '#333' : '#7c4dff',
-                color: '#fff', border: 'none', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer'
+                width: '100%', padding: '13px', borderRadius: '12px', marginTop: '4px',
+                background: (!agreed || !name || !contact || saving) ? '#2a2a3a' : 'linear-gradient(135deg, #7c4dff, #651fff)',
+                color: (!agreed || !name || !contact || saving) ? '#555' : '#fff',
+                border: 'none', fontSize: '0.95rem', fontWeight: 700, cursor: saving ? 'wait' : 'pointer',
+                transition: 'background 0.2s',
               }}
             >
-              {saving ? 'Saving...' : 'Finish Sign Up'}
+              {saving ? 'Saving…' : '🎉 Finish Sign Up'}
             </button>
 
-            <button type="button" onClick={() => signOut(auth)} style={{ background: 'none', border: 'none', color: '#ff5252', fontSize: '0.8rem', textDecoration: 'underline', marginTop: '5px', cursor: 'pointer' }}>
-              Cancel & Sign Out
+            <button type="button" onClick={handleSignOut} style={{
+              background: 'none', border: 'none', color: '#ff5252',
+              fontSize: '0.8rem', textDecoration: 'underline', cursor: 'pointer', padding: 0,
+            }}>
+              Cancel &amp; Sign Out
             </button>
           </form>
         )}
@@ -161,8 +186,12 @@ export default function AuthModal() {
   );
 }
 
-const labelStyle = { display: 'block', fontSize: '0.8rem', color: '#aaa', marginBottom: '6px', fontWeight: 'bold' };
+const labelStyle = {
+  display: 'block', fontSize: '0.78rem', color: '#aaa', marginBottom: '6px', fontWeight: 600,
+};
 const inputStyle = {
-  width: '100%', padding: '12px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)',
-  background: 'rgba(255,255,255,0.05)', color: '#fff', fontSize: '0.95rem'
+  width: '100%', padding: '11px 13px', borderRadius: '9px',
+  border: '1px solid rgba(255,255,255,0.1)',
+  background: 'rgba(255,255,255,0.04)', color: '#fff', fontSize: '0.9rem',
+  outline: 'none', boxSizing: 'border-box',
 };
