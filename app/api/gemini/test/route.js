@@ -21,7 +21,7 @@ export async function GET() {
           'X-Title': 'VisionMate'
         },
         body: JSON.stringify({
-          model: 'meta-llama/llama-3.2-11b-vision-instruct:free',
+          model: 'google/gemma-4-26b-a4b-it:free',
           messages: [{ role: 'user', content: 'Reply with the single word: OK' }],
           max_tokens: 5
         })
