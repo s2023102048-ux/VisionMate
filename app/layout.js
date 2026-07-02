@@ -27,7 +27,13 @@ export default function RootLayout({ children }) {
           rel="stylesheet"
           href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"
         />
-      </head>
+        <script dangerouslySetInnerHTML={{ __html: `
+        try {
+          var dark = JSON.parse(localStorage.getItem('vm_dark_mode'));
+          if (dark) document.documentElement.setAttribute('data-theme','dark');
+        } catch(e){}
+      `}} />
+    </head>
       <body>{children}</body>
     </html>
   );

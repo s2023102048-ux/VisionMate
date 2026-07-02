@@ -82,6 +82,30 @@ export default function HomePage() {
   // ── Settings ──────────────────────────────────────────────
   const [settingsOpen, setSettingsOpen] = useState(false);
 
+  // ── Admin ─────────────────────────────────────────────────
+  const ADMIN_EMAIL = 's2023102048@firstasia.edu.ph';
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const { initializeApp, getApps } = await import('firebase/app');
+      const { getAuth, onAuthStateChanged } = await import('firebase/auth');
+      const FIREBASE_CONFIG = {
+        apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+        authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        projectId:         process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        storageBucket:     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+        appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+      };
+      const app  = getApps().length ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
+      const auth = getAuth(app);
+      onAuthStateChanged(auth, (u) => {
+        setIsAdmin(!!u && u.email === ADMIN_EMAIL);
+      });
+    })();
+  }, []);
+
   // ── Toast ─────────────────────────────────────────────────
   const [toast, setToast] = useState({ visible: false, message: '' });
   const toastTimerRef = useRef(null);
@@ -379,6 +403,7 @@ export default function HomePage() {
         onLocationFound={setUserLocation}
         onDeleteReport={handleDeleteReport}
         onNavigateTo={handleNavigateTo}
+        isAdmin={isAdmin}
       />
 
       {/* Floating action card on map tap */}

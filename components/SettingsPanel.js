@@ -82,8 +82,7 @@ export default function SettingsPanel({ open, onClose }) {
   const [profile, setProfile]   = useState(null);
   const [notifs,  setNotifs]    = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [language, setLanguage] = useState('en');
-  const [section, setSection]   = useState('main'); // 'main' | 'language' | 'privacy' | 'about'
+  const [section, setSection]   = useState('main'); // 'main' | 'privacy' | 'about'
   const [notifsGranted, setNotifsGranted] = useState(false);
   const [copied, setCopied]     = useState(false);
 
@@ -94,10 +93,10 @@ export default function SettingsPanel({ open, onClose }) {
 
     const savedDark   = getPref('vm_dark_mode', false);
     const savedNotifs = getPref('vm_notifications', false);
-    const savedLang   = getPref('vm_language', 'en');
     setDarkMode(savedDark);
     setNotifs(savedNotifs);
-    setLanguage(savedLang);
+    // Re-apply dark mode on panel open (persists across refreshes)
+    document.documentElement.setAttribute('data-theme', savedDark ? 'dark' : 'light');
     setNotifsGranted(Notification?.permission === 'granted');
 
     // Load profile from Firebase
@@ -315,12 +314,6 @@ export default function SettingsPanel({ open, onClose }) {
                   label="Dark Mode"
                   right={<Toggle id="dark-mode-toggle" on={darkMode} onChange={handleDarkMode} />}
                 />
-                <MenuRow
-                  icon="🌐"
-                  label="Language"
-                  right={<span style={{ fontSize: '0.82rem', color: 'var(--text-dim)', display: 'flex', alignItems: 'center', gap: 4 }}>{langLabel} <span style={{ fontSize: '0.7rem' }}>❯</span></span>}
-                  onClick={() => setSection('language')}
-                />
               </div>
 
               {/* Account */}
@@ -358,40 +351,6 @@ export default function SettingsPanel({ open, onClose }) {
               >
                 Log Out
               </button>
-            </div>
-          </>
-        )}
-
-        {/* ── LANGUAGE VIEW ── */}
-        {section === 'language' && (
-          <>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '20px 20px 0' }}>
-              <button onClick={() => setSection('main')} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: 'var(--text-muted)', padding: '4px 6px 4px 0' }}>←</button>
-              <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)' }}>Language</span>
-            </div>
-            <div style={{ padding: '16px 16px 0', display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <SectionLabel>Select a language</SectionLabel>
-              {LANGUAGES.map(lang => (
-                <div
-                  key={lang.code}
-                  onClick={() => handleLanguage(lang.code)}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '13px 15px',
-                    background: language === lang.code ? 'rgba(26,86,219,0.06)' : 'var(--surface)',
-                    border: `1px solid ${language === lang.code ? 'rgba(26,86,219,0.25)' : 'var(--border)'}`,
-                    borderRadius: '10px', cursor: 'pointer', transition: 'all 0.15s',
-                  }}
-                >
-                  <span style={{ fontSize: '0.92rem', color: 'var(--text)', fontWeight: language === lang.code ? 600 : 400 }}>
-                    {lang.label}
-                  </span>
-                  {language === lang.code && <span style={{ color: 'var(--accent)', fontSize: '1rem' }}>✓</span>}
-                </div>
-              ))}
-              <p style={{ fontSize: '0.72rem', color: 'var(--text-dim)', padding: '4px 4px 0', lineHeight: 1.5 }}>
-                Note: Full localization is being progressively rolled out. Some text may still appear in English.
-              </p>
             </div>
           </>
         )}

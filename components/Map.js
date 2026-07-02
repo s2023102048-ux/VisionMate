@@ -40,11 +40,11 @@ function buildPopupHTML(report) {
     ? `<p class="popup-note">"${report.note}"</p>`
     : '';
 
-  const deleteBtn = `
+  const deleteBtn = (isAdmin) => isAdmin ? `
     <button class="btn-delete-report" data-id="${report.id}" style="width: 100%; margin-top: 10px; background: rgba(198,40,40,0.05); border: 1px solid rgba(198,40,40,0.15); color: #c62828; padding: 6px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: background 0.2s;">
       🗑️ Delete Report
     </button>
-  `;
+  ` : '';
 
   const navBtns = `
     <div style="display: flex; gap: 8px; margin-top: 10px;">
@@ -66,12 +66,14 @@ function buildPopupHTML(report) {
         ${noteHtml}
         <span class="popup-time">🕐 ${ts}</span>
         ${navBtns}
-        ${deleteBtn}
+        ${deleteBtn(__ADMIN__)}
       </div>
     </div>`;
 }
 
-export default function Map({ reports, onMapClick, destination, routeCoords, onLocationFound, onDeleteReport, onNavigateTo }) {
+const ADMIN_EMAIL = 's2023102048@firstasia.edu.ph';
+
+export default function Map({ reports, onMapClick, destination, routeCoords, onLocationFound, onDeleteReport, onNavigateTo, isAdmin }) {
   const mapRef        = useRef(null);
   const mapDivRef     = useRef(null);
   const pinMarkersRef = useRef({});
@@ -202,6 +204,9 @@ export default function Map({ reports, onMapClick, destination, routeCoords, onL
         seenIds.add(report.id);
         if (pinMarkers[report.id]) map.removeLayer(pinMarkers[report.id]);
 
+        // Patch __ADMIN__ placeholder into the popup HTML
+        const popupHtml = buildPopupHTML(report).replace('__ADMIN__', isAdmin ? 'true' : 'false');
+
         const marker = L.marker([report.lat, report.lng], {
           icon: L.divIcon({
             className: '',
@@ -212,7 +217,7 @@ export default function Map({ reports, onMapClick, destination, routeCoords, onL
           }),
         }).addTo(map);
 
-        marker.bindPopup(buildPopupHTML(report), {
+        marker.bindPopup(popupHtml, {
           maxWidth: 280,
           className: 'visionmate-popup',
         });
