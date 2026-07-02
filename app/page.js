@@ -400,9 +400,6 @@ export default function HomePage() {
       {/* Settings Panel */}
       <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />
 
-      {/* AI Status Bar */}
-      <AiStatusBar />
-
       {/* SOS Emergency Button */}
       <EmergencyButton userLocation={userLocation} />
 

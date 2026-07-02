@@ -38,19 +38,19 @@ export default function AiStatusBar() {
 
   return (
     <div id="ai-status-bar" style={{
-      position: 'fixed',
-      bottom: '90px',
-      right: '16px',
-      zIndex: 950,
+      position: 'relative',
       display: 'flex',
-      flexDirection: 'column',
-      alignItems: 'flex-end',
-      gap: '6px',
+      alignItems: 'center',
       fontFamily: "'Inter', 'Outfit', sans-serif",
     }}>
       {/* Expanded debug panel */}
       {expanded && (
         <div style={{
+          position: 'absolute',
+          top: '100%',
+          right: 0,
+          marginTop: '10px',
+          zIndex: 950,
           background: 'rgba(10,14,26,0.97)',
           border: `1px solid ${s.border}`,
           borderRadius: '14px',
