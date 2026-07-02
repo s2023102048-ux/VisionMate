@@ -30,7 +30,7 @@ function buildPopupHTML(report) {
 
   const photo = report.photoUrl
     ? `<img src="${report.photoUrl}" alt="Report photo" class="popup-photo" loading="lazy" />`
-    : `<div style="height:80px;background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;font-size:2rem;">📷</div>`;
+    : `<div style="height:80px;background:var(--surface-hover);display:flex;align-items:center;justify-content:center;font-size:2rem;">📷</div>`;
 
   const ts = report.timestamp?.toDate
     ? report.timestamp.toDate().toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })
@@ -41,17 +41,17 @@ function buildPopupHTML(report) {
     : '';
 
   const deleteBtn = `
-    <button class="btn-delete-report" data-id="${report.id}" style="width: 100%; margin-top: 10px; background: rgba(255,82,82,0.15); border: 1px solid rgba(255,82,82,0.3); color: #ff5252; padding: 6px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: background 0.2s;">
+    <button class="btn-delete-report" data-id="${report.id}" style="width: 100%; margin-top: 10px; background: rgba(198,40,40,0.05); border: 1px solid rgba(198,40,40,0.15); color: #c62828; padding: 6px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: bold; transition: background 0.2s;">
       🗑️ Delete Report
     </button>
   `;
 
   const navBtns = `
     <div style="display: flex; gap: 8px; margin-top: 10px;">
-      <button class="btn-nav-walk" data-lat="${report.lat}" data-lng="${report.lng}" style="flex: 1; background: rgba(124,77,255,0.15); border: 1px solid rgba(124,77,255,0.3); color: #7c4dff; padding: 6px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: bold; transition: all 0.2s;">
+      <button class="btn-nav-walk" data-lat="${report.lat}" data-lng="${report.lng}" style="flex: 1; background: rgba(26,86,219,0.05); border: 1px solid rgba(26,86,219,0.15); color: #1a56db; padding: 6px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: bold; transition: all 0.2s;">
         🚶 Walk
       </button>
-      <button class="btn-nav-wheelchair" data-lat="${report.lat}" data-lng="${report.lng}" style="flex: 1; background: rgba(0,230,118,0.15); border: 1px solid rgba(0,230,118,0.3); color: #00e676; padding: 6px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: bold; transition: all 0.2s;">
+      <button class="btn-nav-wheelchair" data-lat="${report.lat}" data-lng="${report.lng}" style="flex: 1; background: rgba(46,125,50,0.05); border: 1px solid rgba(46,125,50,0.15); color: #2e7d32; padding: 6px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: bold; transition: all 0.2s;">
         ♿ Wheelchair
       </button>
     </div>
@@ -103,6 +103,7 @@ export default function Map({ reports, onMapClick, destination, routeCoords, onL
         center:      [13.9780, 121.0807],
         zoom:        15,
         zoomControl: false,
+        tap:         false, // Fixes mobile dragging issues
       });
 
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -133,7 +134,7 @@ export default function Map({ reports, onMapClick, destination, routeCoords, onL
           const el = tempPinRef.current?.getElement();
           if (el) el.style.transition = 'none';
           const pin = tempPinRef.current?.getElement()?.querySelector('.pin-head');
-          if (pin) { pin.style.transform = 'scale(1.25) rotate(-45deg)'; pin.style.boxShadow = '0 8px 24px rgba(124,77,255,0.7)'; }
+          if (pin) { pin.style.transform = 'scale(1.25) rotate(-45deg)'; pin.style.boxShadow = '0 4px 16px rgba(26,86,219,0.3)'; }
         });
 
         tempPinRef.current.on('drag', () => {
@@ -301,7 +302,7 @@ export default function Map({ reports, onMapClick, destination, routeCoords, onL
         // OSRM returns [lng, lat]; Leaflet needs [lat, lng]
         const latlngs = routeCoords.map(([lng, lat]) => [lat, lng]);
         routeLayerRef.current = L.polyline(latlngs, {
-          color:   '#7c4dff',
+          color:   '#1a56db',
           weight:  5,
           opacity: 0.85,
           lineCap: 'round',
@@ -311,12 +312,17 @@ export default function Map({ reports, onMapClick, destination, routeCoords, onL
     });
   }, [routeCoords]);
 
-  Map.removeTempPin = () => {
-    if (tempPinRef.current && mapRef.current) {
-      mapRef.current.removeLayer(tempPinRef.current);
-      tempPinRef.current = null;
-    }
-  };
+  useEffect(() => {
+    window.removeTempPin = () => {
+      if (tempPinRef.current && mapRef.current) {
+        mapRef.current.removeLayer(tempPinRef.current);
+        tempPinRef.current = null;
+      }
+    };
+    return () => {
+      delete window.removeTempPin;
+    };
+  }, []);
 
   return <div id="map" ref={mapDivRef}></div>;
 }

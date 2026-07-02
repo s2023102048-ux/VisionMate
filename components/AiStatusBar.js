@@ -2,10 +2,10 @@
 import { useState, useEffect } from 'react';
 
 const STATUS = {
-  idle:    { color: '#7c4dff', bg: 'rgba(124,77,255,0.12)', border: 'rgba(124,77,255,0.3)', dot: '#7c4dff', label: 'Checking AI…' },
-  pass:    { color: '#00e676', bg: 'rgba(0,230,118,0.1)',   border: 'rgba(0,230,118,0.3)',   dot: '#00e676', label: 'AI Ready' },
-  fail:    { color: '#ff5252', bg: 'rgba(255,82,82,0.1)',   border: 'rgba(255,82,82,0.3)',   dot: '#ff5252', label: 'AI Unavailable' },
-  loading: { color: '#fbbf24', bg: 'rgba(251,191,36,0.1)', border: 'rgba(251,191,36,0.3)', dot: '#fbbf24', label: 'Checking AI…' },
+  idle:    { color: '#1a56db', bg: 'rgba(26,86,219,0.1)', border: 'rgba(26,86,219,0.2)', dot: '#1a56db', label: 'Checking AI…' },
+  pass:    { color: '#2e7d32', bg: 'rgba(46,125,50,0.1)',   border: 'rgba(46,125,50,0.2)',   dot: '#2e7d32', label: 'System Ready' },
+  fail:    { color: '#c62828', bg: 'rgba(198,40,40,0.1)',   border: 'rgba(198,40,40,0.2)',   dot: '#c62828', label: 'System Unavailable' },
+  loading: { color: '#b45309', bg: 'rgba(245,158,11,0.1)', border: 'rgba(245,158,11,0.2)', dot: '#f59e0b', label: 'Checking…' },
 };
 
 export default function AiStatusBar() {
@@ -51,25 +51,24 @@ export default function AiStatusBar() {
           right: 0,
           marginTop: '10px',
           zIndex: 950,
-          background: 'rgba(10,14,26,0.97)',
-          border: `1px solid ${s.border}`,
-          borderRadius: '14px',
+          background: '#ffffff',
+          border: `1px solid var(--border)`,
+          borderRadius: '12px',
           padding: '14px 16px',
           minWidth: '260px',
           maxWidth: '320px',
-          boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
-          backdropFilter: 'blur(20px)',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
           display: 'flex',
           flexDirection: 'column',
           gap: '10px',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#fff', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
-              🤖 AI Diagnostics
+            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#333', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+              Diagnostics
             </span>
             <button onClick={runCheck} style={{
-              background: 'rgba(124,77,255,0.2)', border: '1px solid rgba(124,77,255,0.4)',
-              borderRadius: '8px', color: '#7c4dff', fontSize: '0.72rem',
+              background: 'rgba(26,86,219,0.1)', border: '1px solid rgba(26,86,219,0.2)',
+              borderRadius: '6px', color: '#1a56db', fontSize: '0.72rem',
               padding: '3px 10px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600,
             }}>
               Re-test
@@ -77,7 +76,7 @@ export default function AiStatusBar() {
           </div>
 
           {steps.length === 0 && (
-            <div style={{ fontSize: '0.8rem', color: '#888', textAlign: 'center', padding: '8px 0' }}>
+            <div style={{ fontSize: '0.8rem', color: '#777', textAlign: 'center', padding: '8px 0' }}>
               {status === 'loading' ? '⏳ Running checks…' : 'No data'}
             </div>
           )}
@@ -86,16 +85,16 @@ export default function AiStatusBar() {
             <div key={i} style={{
               display: 'flex', gap: '10px', alignItems: 'flex-start',
               padding: '8px 10px',
-              background: s.status === 'pass' ? 'rgba(0,230,118,0.07)' : 'rgba(255,82,82,0.07)',
-              border: `1px solid ${s.status === 'pass' ? 'rgba(0,230,118,0.2)' : 'rgba(255,82,82,0.2)'}`,
+              background: s.status === 'pass' ? 'rgba(46,125,50,0.05)' : 'rgba(198,40,40,0.05)',
+              border: `1px solid ${s.status === 'pass' ? 'rgba(46,125,50,0.15)' : 'rgba(198,40,40,0.15)'}`,
               borderRadius: '8px',
             }}>
               <span style={{ fontSize: '0.85rem', flexShrink: 0, marginTop: '1px' }}>
                 {s.status === 'pass' ? '✅' : '❌'}
               </span>
               <div>
-                <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#fff', marginBottom: '2px' }}>{s.step}</div>
-                <div style={{ fontSize: '0.72rem', color: '#aaa', lineHeight: 1.4 }}>{s.detail}</div>
+                <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#333', marginBottom: '2px' }}>{s.step}</div>
+                <div style={{ fontSize: '0.72rem', color: '#666', lineHeight: 1.4 }}>{s.detail}</div>
               </div>
             </div>
           ))}
@@ -106,7 +105,7 @@ export default function AiStatusBar() {
       <button
         id="ai-status-pill"
         onClick={() => setExpanded(e => !e)}
-        title="Click to see AI diagnostics"
+        title="Click to see diagnostics"
         style={{
           display: 'flex', alignItems: 'center', gap: '7px',
           background: s.bg,
@@ -114,8 +113,7 @@ export default function AiStatusBar() {
           borderRadius: '20px',
           padding: '6px 12px',
           cursor: 'pointer',
-          backdropFilter: 'blur(12px)',
-          boxShadow: `0 2px 12px rgba(0,0,0,0.4)`,
+          boxShadow: `0 2px 8px rgba(0,0,0,0.05)`,
           transition: 'all 0.2s',
           fontFamily: 'inherit',
         }}
@@ -130,14 +128,14 @@ export default function AiStatusBar() {
           boxShadow: status === 'loading'
             ? `0 0 0 3px ${s.dot}33`
             : status === 'pass'
-            ? `0 0 6px ${s.dot}`
+            ? `none`
             : 'none',
           animation: status === 'loading' ? 'aiPulse 1s ease-in-out infinite' : 'none',
         }} />
         <span style={{ fontSize: '0.75rem', fontWeight: 600, color: s.color, whiteSpace: 'nowrap' }}>
           {s.label}
         </span>
-        <span style={{ fontSize: '0.65rem', color: '#666', marginLeft: '2px' }}>
+        <span style={{ fontSize: '0.65rem', color: '#777', marginLeft: '2px' }}>
           {expanded ? '▲' : '▼'}
         </span>
       </button>

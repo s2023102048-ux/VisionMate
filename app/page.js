@@ -234,7 +234,7 @@ export default function HomePage() {
     resetModal();
     setSelectedLat(null);
     setSelectedLng(null);
-    if (typeof Map.removeTempPin === 'function') Map.removeTempPin();
+    if (typeof window !== 'undefined' && typeof window.removeTempPin === 'function') window.removeTempPin();
   }, [resetModal]);
 
   const handleReselect = useCallback(() => {
@@ -243,7 +243,7 @@ export default function HomePage() {
     setHintVisible(true);
     setSelectedLat(null);
     setSelectedLng(null);
-    if (typeof Map.removeTempPin === 'function') Map.removeTempPin();
+    if (typeof window !== 'undefined' && typeof window.removeTempPin === 'function') window.removeTempPin();
   }, []);
 
   const handlePhotoChange = useCallback((file) => {
@@ -256,7 +256,7 @@ export default function HomePage() {
   }, []);
 
   const resetAndCleanup = useCallback(() => {
-    if (typeof Map.removeTempPin === 'function') Map.removeTempPin();
+    if (typeof window !== 'undefined' && typeof window.removeTempPin === 'function') window.removeTempPin();
     setSelectedLat(null);
     setSelectedLng(null);
     setModalVisible(false);

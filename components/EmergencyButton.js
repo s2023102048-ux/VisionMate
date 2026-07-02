@@ -1,25 +1,61 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function EmergencyButton({ userLocation }) {
-  const [open, setOpen] = useState(false);
+  const [open,   setOpen]   = useState(false);
   const [shared, setShared] = useState(false);
+  const [contacts, setContacts] = useState({ family: null, care: null });
 
-  const callFamily = () => {
-    const num = localStorage.getItem('vm_family_number');
-    if (num) window.location.href = `tel:${num}`;
-    else {
-      const input = prompt('Enter your family\'s phone number to call:');
-      if (input) { localStorage.setItem('vm_family_number', input); window.location.href = `tel:${input}`; }
-    }
-  };
+  // Load contacts from Firebase on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const { initializeApp, getApps } = await import('firebase/app');
+        const { getAuth, onAuthStateChanged } = await import('firebase/auth');
+        const { getFirestore, doc, getDoc } = await import('firebase/firestore');
+        const FIREBASE_CONFIG = {
+          apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+          authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+          projectId:         process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+          storageBucket:     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+          messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+          appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+        };
+        const app  = getApps().length ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
+        const auth = getAuth(app);
+        const db   = getFirestore(app);
 
-  const callCaregiver = () => {
-    const num = localStorage.getItem('vm_caregiver_number');
-    if (num) window.location.href = `tel:${num}`;
-    else {
-      const input = prompt('Enter your caregiver\'s phone number to call:');
-      if (input) { localStorage.setItem('vm_caregiver_number', input); window.location.href = `tel:${input}`; }
+        onAuthStateChanged(auth, async (u) => {
+          if (u) {
+            const snap = await getDoc(doc(db, 'users', u.uid));
+            if (snap.exists()) {
+              const data = snap.data();
+              setContacts({
+                family: data.emergencyContact  || null,
+                care:   data.careNetworkContact || null,
+              });
+            }
+          }
+        });
+      } catch (err) {
+        console.warn('Could not load emergency contacts:', err);
+      }
+    })();
+  }, []);
+
+  // ── Call helper: prompt if no number saved ───────────────────────────────
+  const callNumber = (type) => {
+    const saved = type === 'family' ? contacts.family : contacts.care;
+    if (saved) {
+      window.location.href = `tel:${saved}`;
+    } else {
+      const label = type === 'family' ? "family member's" : "care network member's";
+      const input = prompt(`Enter your ${label} phone number to call:`);
+      if (input) {
+        // Save to state so it's remembered for this session
+        setContacts(prev => ({ ...prev, [type]: input }));
+        window.location.href = `tel:${input}`;
+      }
     }
   };
 
@@ -59,22 +95,30 @@ export default function EmergencyButton({ userLocation }) {
             <p className="sos-subtitle">Choose an option below</p>
 
             <div className="sos-options">
-              <button className="sos-option" id="sos-call-family" onClick={callFamily}>
+
+              {/* Call Family */}
+              <button className="sos-option" id="sos-call-family" onClick={() => callNumber('family')}>
                 <span className="sos-option-icon">📞</span>
                 <div>
                   <span className="sos-option-label">Call Family</span>
-                  <span className="sos-option-sub">Opens your phone dialer</span>
+                  <span className="sos-option-sub">
+                    {contacts.family ? `📱 ${contacts.family}` : 'Opens your phone dialer'}
+                  </span>
                 </div>
               </button>
 
-              <button className="sos-option" id="sos-call-caregiver" onClick={callCaregiver}>
+              {/* Call Care Network */}
+              <button className="sos-option" id="sos-call-caregiver" onClick={() => callNumber('care')}>
                 <span className="sos-option-icon">🏥</span>
                 <div>
-                  <span className="sos-option-label">Call Caregiver</span>
-                  <span className="sos-option-sub">Opens your phone dialer</span>
+                  <span className="sos-option-label">Call Care Network</span>
+                  <span className="sos-option-sub">
+                    {contacts.care ? `📱 ${contacts.care}` : 'Caregiver or support member'}
+                  </span>
                 </div>
               </button>
 
+              {/* Share Location */}
               <button className="sos-option" id="sos-share-location" onClick={shareLocation}>
                 <span className="sos-option-icon">📍</span>
                 <div>
@@ -84,7 +128,18 @@ export default function EmergencyButton({ userLocation }) {
                   <span className="sos-option-sub">Send your GPS coordinates</span>
                 </div>
               </button>
+
             </div>
+
+            {/* Contact note */}
+            {(!contacts.family && !contacts.care) && (
+              <p style={{
+                margin: '12px 0 0', fontSize: '0.72rem',
+                color: 'var(--text-muted)', textAlign: 'center', lineHeight: 1.5,
+              }}>
+                💡 Tip: Set up emergency contacts during sign-up to enable one-tap calling.
+              </p>
+            )}
           </div>
         </div>
       )}
