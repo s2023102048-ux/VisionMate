@@ -233,7 +233,7 @@ export default function SettingsPanel({ open, onClose }) {
         id="settings-panel"
         style={{
           width: '100%', maxWidth: '520px',
-          background: '#ffffff', border: '1px solid var(--border)',
+          background: 'var(--surface)', border: '1px solid var(--border)',
           borderRadius: '16px 16px 0 0',
           padding: '0 0 40px',
           display: 'flex', flexDirection: 'column',

@@ -116,9 +116,9 @@ export default function OnboardingModal() {
         id="onboarding-modal"
         style={{
           width: '100%', maxWidth: '400px',
-          background: '#ffffff',
+          background: 'var(--surface)',
           borderRadius: '16px',
-          border: '1px solid #e0e0e0',
+          border: '1px solid var(--border)',
           boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
           overflow: 'hidden',
           display: 'flex', flexDirection: 'column',
@@ -153,12 +153,12 @@ export default function OnboardingModal() {
             onClick={close}
             style={{
               background: 'none', border: 'none',
-              color: '#999', fontSize: '0.82rem',
+              color: 'var(--text-muted)', fontSize: '0.82rem',
               cursor: 'pointer', padding: '4px 0',
               transition: 'color 0.2s',
             }}
-            onMouseEnter={e => e.target.style.color = '#555'}
-            onMouseLeave={e => e.target.style.color = '#999'}
+            onMouseEnter={e => e.target.style.color = 'var(--text)'}
+            onMouseLeave={e => e.target.style.color = 'var(--text-muted)'}
           >
             Skip
           </button>
@@ -167,8 +167,8 @@ export default function OnboardingModal() {
         {/* Main illustration area */}
         <div style={{
           margin: '20px 20px 0',
-          background: '#f9f9f9',
-          border: '1px solid #eaeaea',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
           borderRadius: '12px',
           padding: '28px 20px',
           display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -179,8 +179,8 @@ export default function OnboardingModal() {
           {/* Hero icon */}
           <div style={{
             width: 64, height: 64, borderRadius: '16px',
-            background: '#ffffff',
-            border: '1px solid #e0e0e0',
+            background: 'var(--bg)',
+            border: '1px solid var(--border)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '2rem',
             boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
@@ -194,12 +194,12 @@ export default function OnboardingModal() {
               {s.visual.map((v, i) => (
                 <div key={i} style={{
                   display: 'flex', alignItems: 'center', gap: 6,
-                  background: '#ffffff',
-                  border: '1px solid #e0e0e0',
+                  background: 'var(--bg)',
+                  border: '1px solid var(--border)',
                   borderRadius: '8px', padding: '7px 12px',
                 }}>
                   <span style={{ fontSize: '1rem' }}>{v.icon}</span>
-                  <span style={{ fontSize: '0.78rem', color: '#555', fontWeight: 500 }}>{v.label}</span>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text)', fontWeight: 500 }}>{v.label}</span>
                 </div>
               ))}
             </div>
@@ -211,8 +211,8 @@ export default function OnboardingModal() {
               {s.steps.map((st, i) => (
                 <div key={i} style={{
                   display: 'flex', alignItems: 'center', gap: 12,
-                  background: '#ffffff',
-                  border: '1px solid #e0e0e0',
+                  background: 'var(--bg)',
+                  border: '1px solid var(--border)',
                   borderRadius: '8px', padding: '9px 12px',
                 }}>
                   <div style={{
@@ -221,7 +221,7 @@ export default function OnboardingModal() {
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     fontSize: '0.75rem', fontWeight: 700, color: accent, flexShrink: 0,
                   }}>{st.num}</div>
-                  <span style={{ fontSize: '0.82rem', color: '#333' }}>{st.text}</span>
+                  <span style={{ fontSize: '0.82rem', color: 'var(--text)' }}>{st.text}</span>
                 </div>
               ))}
             </div>
@@ -233,13 +233,13 @@ export default function OnboardingModal() {
               {s.modes.map((m, i) => (
                 <div key={i} style={{
                   flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6,
-                  background: '#ffffff',
-                  border: '1px solid #e0e0e0',
+                  background: 'var(--bg)',
+                  border: '1px solid var(--border)',
                   borderRadius: '8px', padding: '12px 10px',
                 }}>
                   <span style={{ fontSize: '1.4rem' }}>{m.icon}</span>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#333' }}>{m.label}</span>
-                  <span style={{ fontSize: '0.68rem', color: '#777' }}>{m.sub}</span>
+                  <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)' }}>{m.label}</span>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--text-dim)' }}>{m.sub}</span>
                 </div>
               ))}
             </div>
@@ -251,12 +251,12 @@ export default function OnboardingModal() {
           <h2 style={{
             margin: '0 0 8px',
             fontSize: '1.2rem', fontWeight: 700, lineHeight: 1.3,
-            color: '#1a1a1a',
+            color: 'var(--text)',
             whiteSpace: 'pre-line',
           }}>{s.title}</h2>
           <p style={{
             margin: 0, fontSize: '0.88rem', lineHeight: 1.5,
-            color: '#555',
+            color: 'var(--text-muted)',
           }}>{s.body}</p>
         </div>
 
@@ -264,13 +264,13 @@ export default function OnboardingModal() {
         {s.tip && (
           <div style={{
             margin: '12px 22px 0',
-            background: '#f5f5f5',
-            border: '1px solid #e0e0e0',
+            background: 'var(--surface)',
+            border: '1px solid var(--border)',
             borderRadius: '8px', padding: '8px 12px',
             display: 'flex', alignItems: 'flex-start', gap: 8,
           }}>
             <span style={{ fontSize: '0.95rem', flexShrink: 0 }}>{s.tip.icon}</span>
-            <span style={{ fontSize: '0.78rem', color: '#666', lineHeight: 1.4 }}>{s.tip.text}</span>
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>{s.tip.text}</span>
           </div>
         )}
 
@@ -305,13 +305,13 @@ export default function OnboardingModal() {
                 onClick={prev}
                 style={{
                   padding: '8px 16px', borderRadius: '8px',
-                  background: '#f5f5f5',
-                  border: '1px solid #e0e0e0',
-                  color: '#555', cursor: 'pointer', fontSize: '0.88rem',
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text)', cursor: 'pointer', fontSize: '0.88rem',
                   fontFamily: 'inherit', transition: 'all 0.2s',
                 }}
-                onMouseEnter={e => e.target.style.background = '#eeeeee'}
-                onMouseLeave={e => e.target.style.background = '#f5f5f5'}
+                onMouseEnter={e => e.target.style.background = 'var(--surface-hover)'}
+                onMouseLeave={e => e.target.style.background = 'var(--surface)'}
               >
                 Back
               </button>

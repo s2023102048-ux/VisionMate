@@ -36,54 +36,74 @@ Respond ONLY with a raw JSON object, no markdown, no explanation:
 
 
 // ── OpenRouter (primary — free, Cloudflare-compatible) ────────
+// Supports up to 3 keys: OPENROUTER_API_KEY, OPENROUTER_API_KEY_2, OPENROUTER_API_KEY_3
 async function callOpenRouter(mimeType, base64, categoryHint) {
-  const key = process.env.OPENROUTER_API_KEY;
-  if (!key) throw new Error('OPENROUTER_API_KEY not set');
+  const keys = [
+    process.env.OPENROUTER_API_KEY,
+    process.env.OPENROUTER_API_KEY_2,
+    process.env.OPENROUTER_API_KEY_3,
+  ].filter(Boolean);
+
+  if (keys.length === 0) throw new Error('No OPENROUTER_API_KEY set');
 
   const dataUrl = `data:${mimeType};base64,${base64}`;
-
   const body = {
     model: 'google/gemma-4-26b-a4b-it:free',
-    messages: [
-      {
-        role: 'user',
-        content: [
-          { type: 'text',      text: SYSTEM_PROMPT(categoryHint) },
-          { type: 'image_url', image_url: { url: dataUrl } }
-        ]
-      }
-    ],
+    messages: [{
+      role: 'user',
+      content: [
+        { type: 'text',      text: SYSTEM_PROMPT(categoryHint) },
+        { type: 'image_url', image_url: { url: dataUrl } }
+      ]
+    }],
     temperature: 0.1,
     max_tokens: 512,
     response_format: { type: 'json_object' }
   };
 
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${key}`,
-      'HTTP-Referer': 'https://visionmate.pages.dev',
-      'X-Title': 'VisionMate'
-    },
-    body: JSON.stringify(body)
-  });
+  let lastError;
+  for (const key of keys) {
+    try {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`,
+          'HTTP-Referer': 'https://visionmate.pages.dev',
+          'X-Title': 'VisionMate'
+        },
+        body: JSON.stringify(body)
+      });
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`OpenRouter error ${res.status}: ${err}`);
+      if (!res.ok) {
+        const err = await res.text();
+        // Rate-limited or quota — try next key
+        lastError = new Error(`OpenRouter error ${res.status}: ${err}`);
+        console.warn(`OpenRouter key ${key.slice(0,10)}... failed, trying next:`, lastError.message);
+        continue;
+      }
+
+      const data = await res.json();
+      const text = data.choices?.[0]?.message?.content || '{}';
+      return { candidates: [{ content: { parts: [{ text }] } }] };
+    } catch (err) {
+      lastError = err;
+      console.warn(`OpenRouter key ${key.slice(0,10)}... threw:`, err.message);
+    }
   }
 
-  const data = await res.json();
-  const text = data.choices?.[0]?.message?.content || '{}';
-  // Return Gemini-compatible shape
-  return { candidates: [{ content: { parts: [{ text }] } }] };
+  throw lastError || new Error('All OpenRouter keys failed');
 }
 
-// ── Gemini (fallback) ─────────────────────────────────────────
+// ── Gemini (fallback) — supports 2 keys ─────────────────────
 async function callGemini(mimeType, base64, categoryHint) {
-  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
-  if (!apiKey) throw new Error('No Gemini API key set');
+  const keys = [
+    process.env.NEXT_PUBLIC_GEMINI_API_KEY,
+    process.env.GEMINI_API_KEY,
+    process.env.GEMINI_API_KEY_2,
+  ].filter(Boolean);
+
+  if (keys.length === 0) throw new Error('No Gemini API key set');
 
   const body = {
     contents: [{
@@ -95,16 +115,28 @@ async function callGemini(mimeType, base64, categoryHint) {
     generationConfig: { temperature: 0.1, maxOutputTokens: 512, responseMimeType: 'application/json' }
   };
 
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
-  );
+  let lastError;
+  for (const apiKey of keys) {
+    try {
+      const res = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+      );
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`Gemini error ${res.status}: ${err}`);
+      if (!res.ok) {
+        const err = await res.text();
+        lastError = new Error(`Gemini error ${res.status}: ${err}`);
+        console.warn(`Gemini key ${apiKey.slice(0,8)}... failed, trying next:`, lastError.message);
+        continue;
+      }
+      return res.json();
+    } catch (err) {
+      lastError = err;
+      console.warn(`Gemini key ${apiKey.slice(0,8)}... threw:`, err.message);
+    }
   }
-  return res.json();
+
+  throw lastError || new Error('All Gemini keys failed');
 }
 
 // ── Handler ───────────────────────────────────────────────────

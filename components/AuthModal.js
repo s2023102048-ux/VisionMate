@@ -183,7 +183,7 @@ export default function AuthModal() {
           <div
             onClick={e => e.stopPropagation()}
             style={{
-              background: '#fff', borderRadius: '16px', padding: '0',
+              background: 'var(--surface)', borderRadius: '16px', padding: '0',
               width: '100%', maxWidth: '480px', maxHeight: '80vh',
               display: 'flex', flexDirection: 'column',
               boxShadow: '0 8px 32px rgba(0,0,0,0.2)',
@@ -192,14 +192,14 @@ export default function AuthModal() {
           >
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-              padding: '18px 20px', borderBottom: '1px solid #e0e0e0', flexShrink: 0,
+              padding: '18px 20px', borderBottom: '1px solid var(--border)', flexShrink: 0,
             }}>
               <div>
-                <p style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: '#1a1a1a' }}>🛡️ Privacy Policy</p>
-                <p style={{ margin: 0, fontSize: '0.72rem', color: '#777' }}>VisionMate · July 2, 2026</p>
+                <p style={{ margin: 0, fontSize: '1rem', fontWeight: 700, color: 'var(--text)' }}>🛡️ Privacy Policy</p>
+                <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-dim)' }}>VisionMate · July 2, 2026</p>
               </div>
               <button onClick={() => setShowPrivacy(false)} style={{
-                background: '#f5f5f5', border: '1px solid #e0e0e0',
+                background: 'var(--bg)', border: '1px solid var(--border)',
                 borderRadius: '50%', width: 32, height: 32, cursor: 'pointer',
                 fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>✕</button>
@@ -207,12 +207,12 @@ export default function AuthModal() {
             <div style={{ overflowY: 'auto', padding: '20px', flex: 1 }}>
               <pre style={{
                 fontFamily: "'Inter', sans-serif", fontSize: '0.82rem',
-                color: '#444', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0,
+                color: 'var(--text-muted)', lineHeight: 1.7, whiteSpace: 'pre-wrap', margin: 0,
               }}>
                 {PRIVACY_POLICY.trim()}
               </pre>
             </div>
-            <div style={{ padding: '14px 20px', borderTop: '1px solid #e0e0e0', flexShrink: 0 }}>
+            <div style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', flexShrink: 0 }}>
               <button
                 onClick={() => setShowPrivacy(false)}
                 style={{
@@ -236,7 +236,7 @@ export default function AuthModal() {
         overflowY: 'auto',
       }}>
         <div style={{
-          background: '#fff', border: '1px solid var(--border)',
+          background: 'var(--surface)', border: '1px solid var(--border)',
           borderRadius: '20px', padding: '32px 28px', width: '100%', maxWidth: '420px',
           color: 'var(--text)', boxShadow: 'var(--shadow)',
           animation: 'slideUp 0.3s ease', margin: 'auto',
