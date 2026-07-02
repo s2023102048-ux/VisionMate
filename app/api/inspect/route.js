@@ -7,7 +7,7 @@
 // Required for Cloudflare Pages deployment
 export const runtime = 'edge';
 
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_MODEL = 'gemini-2.5-flash';
 
 export async function POST(request) {
   try {
@@ -72,9 +72,9 @@ You must respond ONLY with a valid JSON object exactly matching the structure be
       },
     };
 
-    // Retry logic: up to 2 attempts per model, 3s wait on 429
-    // gemini-2.0-flash-lite has 30 RPM (vs 15 RPM for 2.0-flash)
-    const MODELS = ['gemini-2.0-flash', 'gemini-2.0-flash-lite'];
+    // gemini-2.5-flash = primary (works with this key)
+    // gemini-2.0-flash = fallback
+    const MODELS = ['gemini-2.5-flash', 'gemini-2.0-flash'];
     let geminiResponse;
     let lastStatus = 0;
 
