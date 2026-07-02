@@ -11,6 +11,7 @@ import SearchBar       from '../components/SearchBar';
 import NavPanel        from '../components/NavPanel';
 import EmergencyButton from '../components/EmergencyButton';
 import OnboardingModal from '../components/OnboardingModal';
+import SettingsPanel   from '../components/SettingsPanel';
 import AiStatusBar     from '../components/AiStatusBar';
 
 import { saveReport, listenToReports, uploadPhoto } from '../lib/firebase';
@@ -73,6 +74,9 @@ export default function HomePage() {
   const [routeCoords,  setRouteCoords]  = useState(null);
   const [routeHazards, setRouteHazards] = useState([]);
   const [navVisible,   setNavVisible]   = useState(false);
+
+  // ── Settings ──────────────────────────────────────────────
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   // ── Toast ─────────────────────────────────────────────────
   const [toast, setToast] = useState({ visible: false, message: '' });
@@ -324,7 +328,7 @@ export default function HomePage() {
       {/* First-time onboarding */}
       <OnboardingModal />
 
-      <Header countAccessible={countAccessible} countHazard={countHazard} />
+      <Header onSettingsClick={() => setSettingsOpen(true)} />
 
       <SearchBar onSelectLocation={handleSelectLocation} onClear={handleClearSearch} />
 
@@ -335,6 +339,9 @@ export default function HomePage() {
         routeCoords={routeCoords}
         onLocationFound={setUserLocation}
       />
+
+      {/* Settings Panel */}
+      <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} reports={reports} />
 
       {/* AI Status Bar */}
       <AiStatusBar />
