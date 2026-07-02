@@ -50,7 +50,8 @@ async function callGroq(mimeType, base64, categoryHint) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${groqKey}`
+      'Authorization': `Bearer ${groqKey}`,
+      'User-Agent': 'VisionMate/1.0 (Cloudflare Edge)'
     },
     body: JSON.stringify(body)
   });
@@ -83,7 +84,7 @@ async function callGemini(mimeType, base64, categoryHint) {
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+    { method: 'POST', headers: { 'Content-Type': 'application/json', 'User-Agent': 'VisionMate/1.0 (Cloudflare Edge)' }, body: JSON.stringify(body) }
   );
 
   if (!res.ok) {

@@ -14,7 +14,7 @@ export async function GET() {
     try {
       const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}` },
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}`, 'User-Agent': 'VisionMate/1.0' },
         body: JSON.stringify({
           model: 'meta-llama/llama-4-scout-17b-16e-instruct',
           messages: [{ role: 'user', content: 'Reply with the single word: OK' }],
@@ -52,7 +52,7 @@ export async function GET() {
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'User-Agent': 'VisionMate/1.0' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: 'Reply with the single word: OK' }] }],
           generationConfig: { maxOutputTokens: 5 }
