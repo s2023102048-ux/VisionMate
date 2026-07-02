@@ -10,6 +10,7 @@ import Toast           from '../components/Toast';
 import SearchBar       from '../components/SearchBar';
 import NavPanel        from '../components/NavPanel';
 import EmergencyButton from '../components/EmergencyButton';
+import OnboardingModal from '../components/OnboardingModal';
 
 import { saveReport, listenToReports, uploadPhoto } from '../lib/firebase';
 
@@ -299,6 +300,9 @@ export default function HomePage() {
 
   return (
     <>
+      {/* First-time onboarding */}
+      <OnboardingModal />
+
       <Header countAccessible={countAccessible} countHazard={countHazard} />
 
       <SearchBar onSelectLocation={handleSelectLocation} onClear={handleClearSearch} />

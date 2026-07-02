@@ -7,7 +7,7 @@
 // Required for Cloudflare Pages deployment
 export const runtime = 'edge';
 
-const GEMINI_MODEL = 'gemini-2.5-flash';
+const GEMINI_MODEL = 'gemini-2.0-flash';
 
 export async function POST(request) {
   try {
