@@ -145,10 +145,10 @@ VisionMate/
 
 ## 👨‍💻 Authors
 
+**Darwin Villanueva Jr.** — FAITH Colleges (Tanauan City)  
 **Precious Mae Ubaldo** — PUP Main (Sta. Mesa, Manila)  
 **Charmen Claire Benitez** — PUP Main (Sta. Mesa, Manila)  
 **Shaina Cadlaon** — PUP Main (Sta. Mesa, Manila)  
-**Darwin Villanueva Jr.** — FAITH Colleges (Tanauan City)  
 
 Built for **SparkFest 2026**
 
