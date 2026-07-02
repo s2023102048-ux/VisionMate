@@ -2,8 +2,8 @@ export const runtime = 'edge';
 
 // ============================================================
 // app/api/gemini/route.js
-// Uses Groq (free, worldwide) as the primary AI provider.
-// Falls back to Gemini if GROQ_API_KEY is not set.
+// Primary:  OpenRouter (free, Cloudflare-Edge compatible)
+// Fallback: Gemini direct (if GEMINI_API_KEY present & working)
 // ============================================================
 
 const SYSTEM_PROMPT = (categoryHint) =>
@@ -11,27 +11,23 @@ const SYSTEM_PROMPT = (categoryHint) =>
 
 Your task is to analyze the provided image of a building entrance, pathway, or facility and generate an "Accessibility Score" for wheelchair users and mobility-impaired individuals.${categoryHint ? `\n\nThe reporter has indicated this issue category: "${categoryHint}". Use this as additional context.` : ''}
 
-You must respond ONLY with a valid JSON object exactly matching the structure below. Do not include markdown formatting like \`\`\`json, just the raw JSON object.
+You must respond ONLY with a valid JSON object exactly matching the structure below. Do not include markdown formatting, just the raw JSON object.
 
 {
-  "rating": <a float number between 1.0 and 5.0 representing the overall accessibility score>,
-  "positive_features": [
-    <an array of strings listing visible accessible features. Examples: "Wide Entrance", "Wheelchair Ramp", "Flat Surface", "Elevator", "Accessible Restroom">
-  ],
-  "warnings": [
-    <an array of strings listing any visible hazards, difficulties, or missing features. Examples: "Steep incline", "Uneven pavement", "No handrails", "Blocked pathway">
-  ]
+  "rating": <a float number between 1.0 and 5.0>,
+  "positive_features": ["<visible accessible feature>"],
+  "warnings": ["<visible hazard or missing feature>"]
 }`;
 
-// ── Groq vision call (primary) ────────────────────────────────
-async function callGroq(mimeType, base64, categoryHint) {
-  const groqKey = process.env.GROQ_API_KEY;
-  if (!groqKey) throw new Error('GROQ_API_KEY not set');
+// ── OpenRouter (primary — free, Cloudflare-compatible) ────────
+async function callOpenRouter(mimeType, base64, categoryHint) {
+  const key = process.env.OPENROUTER_API_KEY;
+  if (!key) throw new Error('OPENROUTER_API_KEY not set');
 
   const dataUrl = `data:${mimeType};base64,${base64}`;
 
   const body = {
-    model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+    model: 'meta-llama/llama-3.2-11b-vision-instruct:free',
     messages: [
       {
         role: 'user',
@@ -46,28 +42,29 @@ async function callGroq(mimeType, base64, categoryHint) {
     response_format: { type: 'json_object' }
   };
 
-  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${groqKey}`,
-      'User-Agent': 'VisionMate/1.0 (Cloudflare Edge)'
+      'Authorization': `Bearer ${key}`,
+      'HTTP-Referer': 'https://visionmate.pages.dev',
+      'X-Title': 'VisionMate'
     },
     body: JSON.stringify(body)
   });
 
   if (!res.ok) {
     const err = await res.text();
-    throw new Error(`Groq error ${res.status}: ${err}`);
+    throw new Error(`OpenRouter error ${res.status}: ${err}`);
   }
 
   const data = await res.json();
-  // Return in Gemini-compatible shape so page.js doesn't need changes
   const text = data.choices?.[0]?.message?.content || '{}';
+  // Return Gemini-compatible shape
   return { candidates: [{ content: { parts: [{ text }] } }] };
 }
 
-// ── Gemini vision call (fallback) ─────────────────────────────
+// ── Gemini (fallback) ─────────────────────────────────────────
 async function callGemini(mimeType, base64, categoryHint) {
   const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error('No Gemini API key set');
@@ -84,14 +81,13 @@ async function callGemini(mimeType, base64, categoryHint) {
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-    { method: 'POST', headers: { 'Content-Type': 'application/json', 'User-Agent': 'VisionMate/1.0 (Cloudflare Edge)' }, body: JSON.stringify(body) }
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
   );
 
   if (!res.ok) {
     const err = await res.text();
     throw new Error(`Gemini error ${res.status}: ${err}`);
   }
-
   return res.json();
 }
 
@@ -100,33 +96,25 @@ export async function POST(req) {
   try {
     const { mimeType, base64, categoryHint } = await req.json();
 
-    let data;
-    let provider;
-
-    // Try Groq first (free, worldwide)
-    if (process.env.GROQ_API_KEY) {
+    // Try OpenRouter first
+    if (process.env.OPENROUTER_API_KEY) {
       try {
-        data = await callGroq(mimeType, base64, categoryHint);
-        provider = 'groq';
-      } catch (groqErr) {
-        console.error('Groq failed, trying Gemini:', groqErr.message);
+        const data = await callOpenRouter(mimeType, base64, categoryHint);
+        return Response.json({ ...data, _provider: 'openrouter' });
+      } catch (err) {
+        console.error('OpenRouter failed, trying Gemini:', err.message);
       }
     }
 
     // Fallback to Gemini
-    if (!data) {
-      try {
-        data = await callGemini(mimeType, base64, categoryHint);
-        provider = 'gemini';
-      } catch (geminiErr) {
-        console.error('Gemini also failed:', geminiErr.message);
-        return Response.json({ error: geminiErr.message }, { status: 502 });
-      }
+    try {
+      const data = await callGemini(mimeType, base64, categoryHint);
+      return Response.json({ ...data, _provider: 'gemini' });
+    } catch (err) {
+      console.error('Gemini also failed:', err.message);
+      return Response.json({ error: err.message }, { status: 502 });
     }
-
-    return Response.json({ ...data, _provider: provider });
   } catch (error) {
-    console.error('Server error:', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
 }

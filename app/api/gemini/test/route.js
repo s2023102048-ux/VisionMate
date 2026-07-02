@@ -3,20 +3,25 @@ export const runtime = 'edge';
 export async function GET() {
   const steps = [];
 
-  // ── Step 1: Groq API Key ──────────────────────────────────
-  const groqKey = process.env.GROQ_API_KEY;
-  if (!groqKey) {
-    steps.push({ step: 'Groq API Key', status: 'fail', detail: 'GROQ_API_KEY not found in environment variables.' });
+  // ── Step 1: OpenRouter API Key ────────────────────────────
+  const orKey = process.env.OPENROUTER_API_KEY;
+  if (!orKey) {
+    steps.push({ step: 'OpenRouter API Key', status: 'fail', detail: 'OPENROUTER_API_KEY not found in environment variables.' });
   } else {
-    steps.push({ step: 'Groq API Key', status: 'pass', detail: `Key found (${groqKey.slice(0, 8)}...).` });
+    steps.push({ step: 'OpenRouter API Key', status: 'pass', detail: `Key found (${orKey.slice(0, 8)}...).` });
 
-    // ── Step 2: Groq Reachability ───────────────────────────
+    // ── Step 2: OpenRouter Reachability ──────────────────────
     try {
-      const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${groqKey}`, 'User-Agent': 'VisionMate/1.0' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${orKey}`,
+          'HTTP-Referer': 'https://visionmate.pages.dev',
+          'X-Title': 'VisionMate'
+        },
         body: JSON.stringify({
-          model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+          model: 'meta-llama/llama-3.2-11b-vision-instruct:free',
           messages: [{ role: 'user', content: 'Reply with the single word: OK' }],
           max_tokens: 5
         })
@@ -26,16 +31,16 @@ export async function GET() {
         const errText = await res.text();
         let detail = `HTTP ${res.status}`;
         try { detail = JSON.parse(errText)?.error?.message || detail; } catch {}
-        steps.push({ step: 'Groq API Reachability', status: 'fail', detail });
+        steps.push({ step: 'OpenRouter API Reachability', status: 'fail', detail });
       } else {
         const data = await res.json();
         const reply = data?.choices?.[0]?.message?.content || '(no reply)';
-        steps.push({ step: 'Groq API Reachability', status: 'pass', detail: `Groq responded: "${reply.trim()}"` });
-        steps.push({ step: 'Vision Model', status: 'pass', detail: 'llama-4-scout-17b supports multimodal (vision) input.' });
-        return Response.json({ ok: true, provider: 'groq', steps });
+        steps.push({ step: 'OpenRouter API Reachability', status: 'pass', detail: `Responded: "${reply.trim()}"` });
+        steps.push({ step: 'Vision Model', status: 'pass', detail: 'llama-3.2-11b-vision supports image input (free tier).' });
+        return Response.json({ ok: true, provider: 'openrouter', steps });
       }
     } catch (err) {
-      steps.push({ step: 'Groq API Reachability', status: 'fail', detail: `Network error: ${err.message}` });
+      steps.push({ step: 'OpenRouter API Reachability', status: 'fail', detail: `Network error: ${err.message}` });
     }
   }
 
@@ -52,7 +57,7 @@ export async function GET() {
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'User-Agent': 'VisionMate/1.0' },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: 'Reply with the single word: OK' }] }],
           generationConfig: { maxOutputTokens: 5 }
