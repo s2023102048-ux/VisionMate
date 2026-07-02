@@ -16,6 +16,7 @@ export default function AuthModal() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (!auth) return;
     const unsub = onAuthStateChanged(auth, async (u) => {
       setUser(u);
       if (u) {

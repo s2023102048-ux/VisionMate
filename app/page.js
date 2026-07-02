@@ -13,11 +13,11 @@ import EmergencyButton from '../components/EmergencyButton';
 import OnboardingModal from '../components/OnboardingModal';
 import SettingsPanel   from '../components/SettingsPanel';
 import AiStatusBar     from '../components/AiStatusBar';
-import AuthModal       from '../components/AuthModal';
 
 import { saveReport, listenToReports, uploadPhoto, deleteReport } from '../lib/firebase';
 
 const Map = dynamic(() => import('../components/Map'), { ssr: false });
+const AuthModal = dynamic(() => import('../components/AuthModal'), { ssr: false });
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
