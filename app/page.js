@@ -117,13 +117,6 @@ export default function HomePage() {
     }
   }, [showToast]);
 
-  const handleNavigateTo = useCallback((report, mode) => {
-    setRouteMode(mode);
-    setDestination({ lat: report.lat, lng: report.lng, name: report.category || 'Target Location' });
-    setNavVisible(true);
-    calculateRoute({ lat: report.lat, lng: report.lng }, userLocation);
-  }, [userLocation, calculateRoute]);
-
   // ── Route calculation ──────────────────────────────────────
   const calculateRoute = useCallback(async (dest, loc) => {
     const origin = loc || userLocation;
@@ -164,6 +157,13 @@ export default function HomePage() {
       console.error('Route error:', err);
     }
   }, [userLocation, reports, showToast]);
+
+  const handleNavigateTo = useCallback((report, mode) => {
+    setRouteMode(mode);
+    setDestination({ lat: report.lat, lng: report.lng, name: report.category || 'Target Location' });
+    setNavVisible(true);
+    calculateRoute({ lat: report.lat, lng: report.lng }, userLocation);
+  }, [userLocation, calculateRoute]);
 
   // Re-calculate route when mode changes
   useEffect(() => {
