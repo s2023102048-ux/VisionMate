@@ -21,7 +21,6 @@ function createPinIconHtml(report) {
       </div>
     </div>`;
 }
-}
 
 function buildPopupHTML(report) {
   const cls   = getSeverityClass(report);
