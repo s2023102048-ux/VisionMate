@@ -1,25 +1,36 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { app, db } from '../lib/firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-// ⚠️ firebase/auth CANNOT be statically imported — Turbopack/Edge Runtime crashes.
-// We dynamically import it ONLY inside useEffect (client side only).
+// ALL firebase imports are dynamic (inside functions/useEffect).
+// Static imports of firebase/* crash Turbopack's Edge/SSR bundle.
 
 export default function AuthModal() {
-  const [user, setUser]           = useState(undefined); // undefined = not yet determined
+  const [user, setUser]                 = useState(undefined);
   const [needsProfile, setNeedsProfile] = useState(false);
-  const [name,    setName]        = useState('');
-  const [contact, setContact]     = useState('');
-  const [agreed,  setAgreed]      = useState(false);
-  const [saving,  setSaving]      = useState(false);
+  const [name,    setName]              = useState('');
+  const [contact, setContact]           = useState('');
+  const [agreed,  setAgreed]            = useState(false);
+  const [saving,  setSaving]            = useState(false);
 
-  // Dynamically load firebase/auth after mount (client only)
   useEffect(() => {
     let unsubscribe;
 
     (async () => {
-      const { getAuth, GoogleAuthProvider, onAuthStateChanged } = await import('firebase/auth');
+      const { initializeApp, getApps } = await import('firebase/app');
+      const { getFirestore, doc, getDoc } = await import('firebase/firestore');
+      const { getAuth, onAuthStateChanged } = await import('firebase/auth');
+
+      const FIREBASE_CONFIG = {
+        apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+        authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        projectId:         process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        storageBucket:     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+        appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+      };
+
+      const app  = getApps().length ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
+      const db   = getFirestore(app);
       const auth = getAuth(app);
 
       unsubscribe = onAuthStateChanged(auth, async (u) => {
@@ -43,7 +54,17 @@ export default function AuthModal() {
 
   const handleGoogleSignIn = async () => {
     try {
+      const { initializeApp, getApps } = await import('firebase/app');
       const { getAuth, GoogleAuthProvider, signInWithPopup } = await import('firebase/auth');
+      const FIREBASE_CONFIG = {
+        apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+        authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        projectId:         process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        storageBucket:     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+        appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+      };
+      const app  = getApps().length ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
       const auth = getAuth(app);
       await signInWithPopup(auth, new GoogleAuthProvider());
     } catch (err) {
@@ -53,19 +74,41 @@ export default function AuthModal() {
   };
 
   const handleSignOut = async () => {
+    const { initializeApp, getApps } = await import('firebase/app');
     const { getAuth, signOut } = await import('firebase/auth');
+    const FIREBASE_CONFIG = {
+      apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+      authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+      projectId:         process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      storageBucket:     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    };
+    const app  = getApps().length ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
     await signOut(getAuth(app));
   };
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
-    if (!name || !contact || !agreed) return;
+    if (!name || !contact || !agreed || !user) return;
     setSaving(true);
     try {
+      const { initializeApp, getApps } = await import('firebase/app');
+      const { getFirestore, doc, setDoc } = await import('firebase/firestore');
+      const FIREBASE_CONFIG = {
+        apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+        authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        projectId:         process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        storageBucket:     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+        appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+      };
+      const app = getApps().length ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
+      const db  = getFirestore(app);
       await setDoc(doc(db, 'users', user.uid), {
         name,
         emergencyContact: contact,
-        email: user.email,
+        email:    user.email,
         photoURL: user.photoURL || '',
         createdAt: new Date(),
       });
@@ -77,10 +120,7 @@ export default function AuthModal() {
     setSaving(false);
   };
 
-  // undefined = still loading auth state, don't flash anything
   if (user === undefined) return null;
-
-  // Logged in and profile complete — nothing to show
   if (user && !needsProfile) return null;
 
   return (
@@ -96,7 +136,6 @@ export default function AuthModal() {
         animation: 'slideUp 0.3s ease',
       }}>
         {!user ? (
-          /* ── Step 1: Sign in ── */
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>♿</div>
             <h2 style={{ margin: '0 0 8px', fontSize: '1.4rem', fontWeight: 700 }}>Welcome to VisionMate</h2>
@@ -108,68 +147,44 @@ export default function AuthModal() {
               background: '#fff', color: '#1a1a1a', border: 'none',
               fontSize: '0.95rem', fontWeight: 700, cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px',
-              transition: 'transform 0.15s',
             }}>
-              <img
-                src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg"
-                width="20" height="20" alt="Google"
-              />
+              <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" width="20" height="20" alt="Google" />
               Continue with Google
             </button>
           </div>
         ) : (
-          /* ── Step 2: Complete profile ── */
           <form onSubmit={handleSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ textAlign: 'center', marginBottom: '4px' }}>
-              {user.photoURL && (
-                <img src={user.photoURL} alt="avatar" style={{ width: 52, height: 52, borderRadius: '50%', marginBottom: 10 }} />
-              )}
+              {user.photoURL && <img src={user.photoURL} alt="avatar" style={{ width: 52, height: 52, borderRadius: '50%', marginBottom: 10 }} />}
               <h2 style={{ margin: '0 0 4px', fontSize: '1.2rem', fontWeight: 700 }}>Complete Your Profile</h2>
               <p style={{ color: '#888', fontSize: '0.82rem', margin: 0 }}>Signed in as {user.email}</p>
             </div>
 
             <div>
               <label style={labelStyle}>Full Name</label>
-              <input
-                type="text" required value={name} onChange={e => setName(e.target.value)}
-                placeholder="Juan Dela Cruz" style={inputStyle}
-              />
+              <input type="text" required value={name} onChange={e => setName(e.target.value)} placeholder="Juan Dela Cruz" style={inputStyle} />
             </div>
 
             <div>
               <label style={labelStyle}>Family Emergency Contact No.</label>
-              <input
-                type="tel" required value={contact} onChange={e => setContact(e.target.value)}
-                placeholder="0912 345 6789" style={inputStyle}
-              />
-              <p style={{ margin: '5px 0 0', fontSize: '0.72rem', color: '#777' }}>
-                This number will be alerted when you press the SOS button.
-              </p>
+              <input type="tel" required value={contact} onChange={e => setContact(e.target.value)} placeholder="0912 345 6789" style={inputStyle} />
+              <p style={{ margin: '5px 0 0', fontSize: '0.72rem', color: '#777' }}>This number will be alerted when you press the SOS button.</p>
             </div>
 
             <label style={{ display: 'flex', gap: '10px', cursor: 'pointer', marginTop: '4px', alignItems: 'flex-start' }}>
-              <input
-                type="checkbox" required checked={agreed} onChange={e => setAgreed(e.target.checked)}
-                style={{ marginTop: 3, transform: 'scale(1.2)', accentColor: '#7c4dff', flexShrink: 0 }}
-              />
+              <input type="checkbox" required checked={agreed} onChange={e => setAgreed(e.target.checked)}
+                style={{ marginTop: 3, transform: 'scale(1.2)', accentColor: '#7c4dff', flexShrink: 0 }} />
               <span style={{ fontSize: '0.8rem', color: '#ccc', lineHeight: 1.5 }}>
-                I have read and agree to the{' '}
-                <span style={{ color: '#7c4dff', textDecoration: 'underline', cursor: 'pointer' }}>Privacy Policy</span>.
-                I consent to VisionMate collecting my name and emergency contact for accessibility and safety purposes.
+                I agree to the <span style={{ color: '#7c4dff', textDecoration: 'underline' }}>Privacy Policy</span> and consent to VisionMate collecting my data for accessibility and safety purposes.
               </span>
             </label>
 
-            <button
-              type="submit"
-              disabled={!agreed || !name || !contact || saving}
-              style={{
-                width: '100%', padding: '13px', borderRadius: '12px', marginTop: '4px',
-                background: (!agreed || !name || !contact || saving) ? '#2a2a3a' : 'linear-gradient(135deg, #7c4dff, #651fff)',
-                color: (!agreed || !name || !contact || saving) ? '#555' : '#fff',
-                border: 'none', fontSize: '0.95rem', fontWeight: 700, cursor: saving ? 'wait' : 'pointer',
-                transition: 'background 0.2s',
-              }}
-            >
+            <button type="submit" disabled={!agreed || !name || !contact || saving} style={{
+              width: '100%', padding: '13px', borderRadius: '12px', marginTop: '4px',
+              background: (!agreed || !name || !contact || saving) ? '#2a2a3a' : 'linear-gradient(135deg, #7c4dff, #651fff)',
+              color: (!agreed || !name || !contact || saving) ? '#555' : '#fff',
+              border: 'none', fontSize: '0.95rem', fontWeight: 700, cursor: saving ? 'wait' : 'pointer',
+            }}>
               {saving ? 'Saving…' : '🎉 Finish Sign Up'}
             </button>
 
@@ -186,9 +201,7 @@ export default function AuthModal() {
   );
 }
 
-const labelStyle = {
-  display: 'block', fontSize: '0.78rem', color: '#aaa', marginBottom: '6px', fontWeight: 600,
-};
+const labelStyle = { display: 'block', fontSize: '0.78rem', color: '#aaa', marginBottom: '6px', fontWeight: 600 };
 const inputStyle = {
   width: '100%', padding: '11px 13px', borderRadius: '9px',
   border: '1px solid rgba(255,255,255,0.1)',
