@@ -93,6 +93,7 @@ export default function Map({ reports, onMapClick, destination, routeCoords, onL
       map.on('click', (e) => {
         const { lat, lng } = e.latlng;
         if (tempPinRef.current) map.removeLayer(tempPinRef.current);
+
         tempPinRef.current = L.marker([lat, lng], {
           icon: L.divIcon({
             className: '',
@@ -102,7 +103,29 @@ export default function Map({ reports, onMapClick, destination, routeCoords, onL
             popupAnchor: [0, -44],
           }),
           zIndexOffset: 1000,
+          draggable: true,
         }).addTo(map);
+
+        // Visual feedback while dragging
+        tempPinRef.current.on('dragstart', () => {
+          const el = tempPinRef.current?.getElement();
+          if (el) el.style.transition = 'none';
+          const pin = tempPinRef.current?.getElement()?.querySelector('.pin-head');
+          if (pin) { pin.style.transform = 'scale(1.25)'; pin.style.boxShadow = '0 8px 24px rgba(124,77,255,0.7)'; }
+        });
+
+        tempPinRef.current.on('drag', () => {
+          map.scrollWheelZoom.disable();
+        });
+
+        tempPinRef.current.on('dragend', (ev) => {
+          const { lat: newLat, lng: newLng } = ev.target.getLatLng();
+          const pin = tempPinRef.current?.getElement()?.querySelector('.pin-head');
+          if (pin) { pin.style.transform = ''; pin.style.boxShadow = ''; }
+          map.scrollWheelZoom.enable();
+          onMapClick(newLat, newLng);
+        });
+
         onMapClick(lat, lng);
       });
 
