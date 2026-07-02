@@ -3,12 +3,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import dynamic from 'next/dynamic';
 
-import Header         from '../components/Header';
-import ReportModal    from '../components/ReportModal';
-import LoadingOverlay from '../components/LoadingOverlay';
-import Toast          from '../components/Toast';
-import SearchBar      from '../components/SearchBar';
-import NavPanel       from '../components/NavPanel';
+import Header          from '../components/Header';
+import ReportModal     from '../components/ReportModal';
+import LoadingOverlay  from '../components/LoadingOverlay';
+import Toast           from '../components/Toast';
+import SearchBar       from '../components/SearchBar';
+import NavPanel        from '../components/NavPanel';
+import EmergencyButton from '../components/EmergencyButton';
 
 import { saveReport, listenToReports, uploadPhoto } from '../lib/firebase';
 
@@ -52,7 +53,8 @@ export default function HomePage() {
   const [selectedLng,    setSelectedLng]    = useState(null);
   const [selectedFile,   setSelectedFile]   = useState(null);
   const [photoPreview,   setPhotoPreview]   = useState('');
-  const [note,           setNote]           = useState('');
+  const [category,      setCategory]      = useState('');
+  const [otherText,     setOtherText]     = useState('');
   const [isSelectingMode, setIsSelectingMode] = useState(false);
   const [modalVisible,   setModalVisible]   = useState(false);
   const [hintVisible,    setHintVisible]    = useState(false);
@@ -180,7 +182,8 @@ export default function HomePage() {
   const resetModal = useCallback(() => {
     setSelectedFile(null);
     setPhotoPreview('');
-    setNote('');
+    setCategory('');
+    setOtherText('');
     setAiStatus('idle');
     setAiResult(null);
   }, []);
@@ -230,19 +233,21 @@ export default function HomePage() {
 
       setLoadingText('Gemini AI is inspecting the photo...');
       setAiStatus('loading');
+      // Build context hint from category
+      const categoryHint = category === 'Others' ? otherText : category;
       let geminiResult;
       try {
         const res = await fetch('/api/inspect', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ base64, mimeType }),
+          body:    JSON.stringify({ base64, mimeType, category: categoryHint }),
         });
         if (!res.ok) throw new Error(`API error: ${res.status}`);
         geminiResult = await res.json();
         if (geminiResult.error) throw new Error(geminiResult.error);
       } catch (geminiErr) {
         console.error('Gemini error:', geminiErr);
-        geminiResult = { status: 'HAZARD', description: 'AI inspection unavailable — report saved manually.' };
+        geminiResult = { status: 'HAZARD', severity: 'Dangerous', description: 'AI inspection unavailable — report saved manually.' };
       }
       setAiStatus('done');
       setAiResult(geminiResult);
@@ -263,8 +268,10 @@ export default function HomePage() {
           lng:         selectedLng,
           photoUrl,
           status:      geminiResult.status,
+          severity:    geminiResult.severity || 'Dangerous',
+          rating:      geminiResult.rating   || null,
           description: geminiResult.description,
-          note:        note.trim(),
+          category:    category === 'Others' ? (otherText || 'Others') : (category || ''),
         });
       } catch (firestoreErr) {
         console.error('Firestore error:', firestoreErr);
@@ -304,6 +311,9 @@ export default function HomePage() {
         onLocationFound={setUserLocation}
       />
 
+      {/* SOS Emergency Button */}
+      <EmergencyButton userLocation={userLocation} />
+
       {/* FAB Report Button */}
       <button className="fab" id="btn-report" title="Report an accessibility issue" onClick={handleFabClick}>
         <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
@@ -341,13 +351,15 @@ export default function HomePage() {
         selectedLng={selectedLng}
         selectedFile={selectedFile}
         photoPreviewSrc={photoPreview}
-        note={note}
+        category={category}
+        otherText={otherText}
         aiStatus={aiStatus}
         aiResult={aiResult}
         onClose={handleCloseModal}
         onReselect={handleReselect}
         onPhotoChange={handlePhotoChange}
-        onNoteChange={setNote}
+        onCategoryChange={setCategory}
+        onOtherTextChange={setOtherText}
         onSubmit={handleSubmit}
       />
 

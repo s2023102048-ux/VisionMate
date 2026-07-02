@@ -2,58 +2,54 @@
 
 import { useRef, useEffect } from 'react';
 
+const CATEGORIES = [
+  'Broken Sidewalk',
+  'No Ramp',
+  'Stairs Only',
+  'Flood',
+  'Construction',
+  'Blocked Sidewalk',
+  'Broken Elevator',
+  'No Accessible CR',
+  'Narrow Entrance',
+  'Others',
+];
+
 export default function ReportModal({
   visible,
   selectedLat,
   selectedLng,
   selectedFile,
   photoPreviewSrc,
-  note,
-  aiStatus,       // 'idle' | 'loading' | 'done'
-  aiResult,       // { status, description } | null
+  category,
+  otherText,
+  aiStatus,
+  aiResult,
   onClose,
   onReselect,
   onPhotoChange,
-  onNoteChange,
+  onCategoryChange,
+  onOtherTextChange,
   onSubmit,
 }) {
   const photoInputRef = useRef(null);
   const canSubmit = selectedLat && selectedFile;
 
-  // Lock body scroll when modal open
   useEffect(() => {
-    if (visible) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
+    if (visible) document.body.style.overflow = 'hidden';
+    else         document.body.style.overflow = '';
     return () => { document.body.style.overflow = ''; };
   }, [visible]);
 
   if (!visible) return null;
 
-  const handleOverlayClick = (e) => {
-    if (e.target === e.currentTarget) onClose();
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) onPhotoChange(file);
-  };
+  const handleOverlayClick = (e) => { if (e.target === e.currentTarget) onClose(); };
+  const handleFileChange   = (e) => { const f = e.target.files[0]; if (f) onPhotoChange(f); };
 
   return (
-    <div
-      className="modal-overlay"
-      id="modal-overlay"
-      onClick={handleOverlayClick}
-    >
-      <div
-        className="modal"
-        id="report-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-title"
-      >
+    <div className="modal-overlay" id="modal-overlay" onClick={handleOverlayClick}>
+      <div className="modal" id="report-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+
         {/* Header */}
         <div className="modal-header">
           <div>
@@ -72,9 +68,7 @@ export default function ReportModal({
             <div className="location-icon">🗺️</div>
             <div className="location-text">
               <span className="coords-text" id="coords-text">
-                {selectedLat
-                  ? `${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}`
-                  : 'No location selected'}
+                {selectedLat ? `${selectedLat.toFixed(5)}, ${selectedLng.toFixed(5)}` : 'No location selected'}
               </span>
               <span className="coords-hint">Close modal → click on map → reopen</span>
             </div>
@@ -92,15 +86,7 @@ export default function ReportModal({
             id="upload-zone"
             onClick={() => photoInputRef.current?.click()}
           >
-            <input
-              type="file"
-              id="photo-input"
-              ref={photoInputRef}
-              accept="image/*"
-              capture="environment"
-              hidden
-              onChange={handleFileChange}
-            />
+            <input type="file" id="photo-input" ref={photoInputRef} accept="image/*" capture="environment" hidden onChange={handleFileChange} />
             {!photoPreviewSrc ? (
               <div className="upload-placeholder" id="upload-placeholder">
                 <div className="upload-icon">📷</div>
@@ -109,17 +95,8 @@ export default function ReportModal({
               </div>
             ) : (
               <>
-                <img
-                  id="photo-preview"
-                  className="photo-preview"
-                  src={photoPreviewSrc}
-                  alt="Photo preview"
-                />
-                <button
-                  className="btn-change-photo"
-                  id="btn-change-photo"
-                  onClick={(e) => { e.stopPropagation(); photoInputRef.current?.click(); }}
-                >
+                <img id="photo-preview" className="photo-preview" src={photoPreviewSrc} alt="Photo preview" />
+                <button className="btn-change-photo" id="btn-change-photo" onClick={(e) => { e.stopPropagation(); photoInputRef.current?.click(); }}>
                   Change Photo
                 </button>
               </>
@@ -127,21 +104,36 @@ export default function ReportModal({
           </div>
         </div>
 
-        {/* Step 3: Note */}
+        {/* Step 3: Category */}
         <div className="modal-section">
-          <label className="section-label" htmlFor="note-input">
-            <span className="step-badge">3</span> Note{' '}
-            <span className="optional-tag">Optional</span>
+          <label className="section-label">
+            <span className="step-badge">3</span> Category
+            <span className="optional-tag">Helps AI</span>
           </label>
-          <textarea
-            id="note-input"
-            className="note-input"
-            placeholder="E.g. 'Broken ramp near the entrance'..."
-            rows={2}
-            maxLength={200}
-            value={note}
-            onChange={(e) => onNoteChange(e.target.value)}
-          />
+          <div className="category-chips" id="category-chips">
+            {CATEGORIES.map((cat) => (
+              <button
+                key={cat}
+                type="button"
+                className={`category-chip${category === cat ? ' selected' : ''}`}
+                onClick={() => onCategoryChange(category === cat ? '' : cat)}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+          {category === 'Others' && (
+            <textarea
+              id="other-text-input"
+              className="note-input"
+              placeholder="Describe the issue..."
+              rows={2}
+              maxLength={200}
+              value={otherText}
+              onChange={(e) => onOtherTextChange(e.target.value)}
+              style={{ marginTop: 10 }}
+            />
+          )}
         </div>
 
         {/* AI Status */}
@@ -158,22 +150,58 @@ export default function ReportModal({
             )}
             {aiStatus === 'done' && aiResult && (
               <div className="ai-result" id="ai-result">
-                <div className={`result-badge ${aiResult.status === 'ACCESSIBLE' ? 'accessible' : 'hazard'}`} id="result-badge">
-                  {aiResult.status === 'ACCESSIBLE' ? '✅ Accessible' : '⚠️ Hazard'}
+                {/* Severity badge + Rating */}
+                <div className="ai-result-header">
+                  <div className={`result-badge severity-${(aiResult.severity || '').toLowerCase()}`} id="result-badge">
+                    {aiResult.severity === 'Safe'      && '🟢 Safe'}
+                    {aiResult.severity === 'Minor'     && '🟡 Minor'}
+                    {aiResult.severity === 'Moderate'  && '🟠 Moderate'}
+                    {aiResult.severity === 'Dangerous' && '🔴 Dangerous'}
+                    {!aiResult.severity && (aiResult.status === 'ACCESSIBLE' ? '✅ Accessible' : '⚠️ Hazard')}
+                  </div>
+                  {aiResult.rating != null && (
+                    <div className="ai-rating" id="ai-rating">
+                      <span className="ai-rating-score">{Number(aiResult.rating).toFixed(1)}</span>
+                      <span className="ai-rating-max">/5.0</span>
+                      <div className="ai-rating-stars">
+                        {[1,2,3,4,5].map(i => (
+                          <span key={i} className={`star ${i <= Math.round(aiResult.rating) ? 'filled' : ''}`}>★</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <p className="result-desc" id="result-desc">{aiResult.description}</p>
+
+                {/* Positive Features */}
+                {aiResult.positive_features?.length > 0 && (
+                  <div className="ai-features" id="ai-features">
+                    <p className="ai-features-label">✅ Accessible Features</p>
+                    <div className="ai-tags">
+                      {aiResult.positive_features.map((f, i) => <span key={i} className="ai-tag green">{f}</span>)}
+                    </div>
+                  </div>
+                )}
+
+                {/* Warnings */}
+                {aiResult.warnings?.length > 0 && (
+                  <div className="ai-warnings" id="ai-warnings">
+                    <p className="ai-features-label">⚠️ Warnings</p>
+                    <div className="ai-tags">
+                      {aiResult.warnings.map((w, i) => <span key={i} className="ai-tag red">{w}</span>)}
+                    </div>
+                  </div>
+                )}
+
+                {!aiResult.positive_features?.length && !aiResult.warnings?.length && (
+                  <p className="result-desc" id="result-desc">{aiResult.description}</p>
+                )}
               </div>
             )}
           </div>
         )}
 
         {/* Submit */}
-        <button
-          className="btn-submit"
-          id="btn-submit"
-          disabled={!canSubmit}
-          onClick={onSubmit}
-        >
+        <button className="btn-submit" id="btn-submit" disabled={!canSubmit} onClick={onSubmit}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
             <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41L9 16.17z"/>
           </svg>

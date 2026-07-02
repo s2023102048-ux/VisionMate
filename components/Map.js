@@ -2,20 +2,32 @@
 
 import { useEffect, useRef } from 'react';
 
-function createPinIconHtml(status) {
-  const colorClass = status === 'ACCESSIBLE' ? 'green' : status === 'HAZARD' ? 'red' : 'pending';
-  const emoji      = status === 'ACCESSIBLE' ? '♿' : status === 'HAZARD' ? '⚠' : '📍';
+function getSeverityClass(report) {
+  if (report.severity === 'Safe')      return 'safe';
+  if (report.severity === 'Minor')     return 'minor';
+  if (report.severity === 'Moderate')  return 'moderate';
+  if (report.severity === 'Dangerous') return 'dangerous';
+  // Fallback for old reports without severity
+  return report.status === 'ACCESSIBLE' ? 'safe' : 'dangerous';
+}
+
+function createPinIconHtml(report) {
+  const cls   = typeof report === 'string' ? report : getSeverityClass(report);
+  const emoji = cls === 'safe' ? '♿' : cls === 'minor' ? '⚠' : cls === 'moderate' ? '⚠' : cls === 'dangerous' ? '🚫' : '📍';
   return `
     <div class="custom-pin">
-      <div class="pin-head ${colorClass}">
+      <div class="pin-head ${cls}">
         <span class="pin-icon">${emoji}</span>
       </div>
     </div>`;
 }
+}
 
 function buildPopupHTML(report) {
-  const statusClass = report.status === 'ACCESSIBLE' ? 'accessible' : 'hazard';
-  const statusLabel = report.status === 'ACCESSIBLE' ? '✅ Accessible' : '⚠️ Hazard';
+  const cls   = getSeverityClass(report);
+  const severityLabel = report.severity || (report.status === 'ACCESSIBLE' ? 'Safe' : 'Dangerous');
+  const severityEmoji = cls === 'safe' ? '🟢' : cls === 'minor' ? '🟡' : cls === 'moderate' ? '🟠' : '🔴';
+  const ratingText    = report.rating ? ` — ${Number(report.rating).toFixed(1)}/5.0` : '';
 
   const photo = report.photoUrl
     ? `<img src="${report.photoUrl}" alt="Report photo" class="popup-photo" loading="lazy" />`
@@ -33,7 +45,7 @@ function buildPopupHTML(report) {
     <div class="popup-content">
       ${photo}
       <div class="popup-body">
-        <div class="popup-status ${statusClass}">${statusLabel}</div>
+        <div class="popup-status severity-${cls}">${severityEmoji} ${severityLabel}${ratingText}</div>
         <p class="popup-desc">${report.description}</p>
         ${noteHtml}
         <span class="popup-time">🕐 ${ts}</span>
@@ -103,6 +115,17 @@ export default function Map({ reports, onMapClick, destination, routeCoords, onL
             const { latitude: lat, longitude: lng } = pos.coords;
             map.setView([lat, lng], 16);
             if (onLocationFound) onLocationFound({ lat, lng });
+
+            // Add pulsing blue user location dot
+            L.marker([lat, lng], {
+              icon: L.divIcon({
+                className: '',
+                html: `<div class="user-location-dot"><div class="user-location-pulse"></div></div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10],
+              }),
+              zIndexOffset: 800,
+            }).addTo(map).bindPopup('📍 You are here', { className: 'visionmate-popup' });
           },
           () => {}
         );
@@ -132,7 +155,7 @@ export default function Map({ reports, onMapClick, destination, routeCoords, onL
         const marker = L.marker([report.lat, report.lng], {
           icon: L.divIcon({
             className: '',
-            html: createPinIconHtml(report.status),
+            html: createPinIconHtml(report),
             iconSize: [32, 40],
             iconAnchor: [16, 40],
             popupAnchor: [0, -44],
