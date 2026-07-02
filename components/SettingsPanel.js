@@ -166,18 +166,6 @@ export default function SettingsPanel({ open, onClose }) {
     }
   };
 
-  // ── Language ─────────────────────────────────────────────────────────────
-  const LANGUAGES = [
-    { code: 'en', label: 'English (US)' },
-    { code: 'fil', label: 'Filipino' },
-    { code: 'ceb', label: 'Cebuano' },
-    { code: 'ilo', label: 'Ilocano' },
-  ];
-  const handleLanguage = (code) => {
-    setLanguage(code);
-    setPref('vm_language', code);
-    setSection('main');
-  };
 
   // ── Sign out ─────────────────────────────────────────────────────────────
   const handleSignOut = async () => {
@@ -204,7 +192,7 @@ export default function SettingsPanel({ open, onClose }) {
   const handleDownloadData = () => {
     const data = {
       profile: { name: profile?.name, email: profile?.email },
-      preferences: { darkMode, notifications: notifs, language },
+      preferences: { darkMode, notifications: notifs },
       exportedAt: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -230,8 +218,6 @@ export default function SettingsPanel({ open, onClose }) {
   if (!open) return null;
 
   const initials = profile?.name ? profile.name.substring(0, 2).toUpperCase() : 'VM';
-  const langLabel = LANGUAGES.find(l => l.code === language)?.label || 'English (US)';
-
   return (
     <div
       id="settings-overlay"

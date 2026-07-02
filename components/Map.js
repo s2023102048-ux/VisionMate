@@ -66,7 +66,7 @@ function buildPopupHTML(report) {
         ${noteHtml}
         <span class="popup-time">🕐 ${ts}</span>
         ${navBtns}
-        ${deleteBtn(__ADMIN__)}
+        ${deleteBtn('__ADMIN__' === 'true')}
       </div>
     </div>`;
 }
