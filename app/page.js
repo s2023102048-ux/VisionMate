@@ -16,8 +16,9 @@ import AiStatusBar     from '../components/AiStatusBar';
 
 import { saveReport, listenToReports, uploadPhoto, deleteReport } from '../lib/firebase';
 
-const Map      = loadDynamic(() => import('../components/Map'),      { ssr: false });
-const AuthModal = loadDynamic(() => import('../components/AuthModal'), { ssr: false });
+const Map              = loadDynamic(() => import('../components/Map'),              { ssr: false });
+const AuthModal        = loadDynamic(() => import('../components/AuthModal'),        { ssr: false });
+const LocationActionCard = loadDynamic(() => import('../components/LocationActionCard'), { ssr: false });
 
 
 function fileToBase64(file) {
@@ -62,6 +63,7 @@ export default function HomePage() {
   const [otherText,     setOtherText]     = useState('');
   const [isSelectingMode, setIsSelectingMode] = useState(false);
   const [modalVisible,   setModalVisible]   = useState(false);
+  const [actionCard,     setActionCard]     = useState(null); // { lat, lng }
   const [hintVisible,    setHintVisible]    = useState(false);
   const [loadingVisible, setLoadingVisible] = useState(false);
   const [loadingText,    setLoadingText]    = useState('');
@@ -196,13 +198,27 @@ export default function HomePage() {
     setSelectedLat(lat);
     setSelectedLng(lng);
     if (isSelectingMode) {
+      // Was already in "pick location for report" mode — open modal directly
       setIsSelectingMode(false);
       setHintVisible(false);
       setModalVisible(true);
-    } else if (!modalVisible) {
-      setModalVisible(true);
+    } else {
+      // Show the floating action card instead of immediately opening modal
+      setActionCard({ lat, lng });
     }
-  }, [isSelectingMode, modalVisible]);
+  }, [isSelectingMode]);
+
+  const handleActionCardReport = useCallback(() => {
+    setModalVisible(true);
+  }, []);
+
+  const handleNavigateToPoint = useCallback((mode) => {
+    if (!actionCard) return;
+    setRouteMode(mode);
+    setDestination({ lat: actionCard.lat, lng: actionCard.lng, name: `${actionCard.lat.toFixed(4)}, ${actionCard.lng.toFixed(4)}` });
+    setNavVisible(true);
+    calculateRoute({ lat: actionCard.lat, lng: actionCard.lng }, userLocation);
+  }, [actionCard, userLocation, calculateRoute]);
 
   const resetModal = useCallback(() => {
     setSelectedFile(null);
@@ -364,6 +380,22 @@ export default function HomePage() {
         onDeleteReport={handleDeleteReport}
         onNavigateTo={handleNavigateTo}
       />
+
+      {/* Floating action card on map tap */}
+      {actionCard && !modalVisible && (
+        <LocationActionCard
+          lat={actionCard.lat}
+          lng={actionCard.lng}
+          onReport={handleActionCardReport}
+          onNavigate={handleNavigateToPoint}
+          onClose={() => {
+            setActionCard(null);
+            if (typeof window !== 'undefined' && typeof window.removeTempPin === 'function') {
+              window.removeTempPin();
+            }
+          }}
+        />
+      )}
 
       {/* Settings Panel */}
       <SettingsPanel open={settingsOpen} onClose={() => setSettingsOpen(false)} />

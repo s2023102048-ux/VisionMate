@@ -81,9 +81,12 @@ export default function Map({ reports, onMapClick, destination, routeCoords, onL
 
   // Initialize map once on mount
   useEffect(() => {
-    if (mapRef.current) return;
+    let isMounted = true;
+    let localMap = null;
 
     import('leaflet').then((L) => {
+      if (!isMounted) return;
+
       delete L.Icon.Default.prototype._getIconUrl;
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
@@ -149,6 +152,7 @@ export default function Map({ reports, onMapClick, destination, routeCoords, onL
       });
 
       mapRef.current = map;
+      localMap = map;
 
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(
@@ -168,16 +172,20 @@ export default function Map({ reports, onMapClick, destination, routeCoords, onL
               zIndexOffset: 800,
             }).addTo(map).bindPopup('📍 You are here', { className: 'visionmate-popup' });
           },
-          () => {}
+          (err) => console.warn('Geolocation error:', err),
+          { enableHighAccuracy: true }
         );
       }
     });
 
     return () => {
-      if (mapRef.current) {
+      isMounted = false;
+      if (localMap) {
+        localMap.remove();
+      } else if (mapRef.current) {
         mapRef.current.remove();
-        mapRef.current = null;
       }
+      mapRef.current = null;
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

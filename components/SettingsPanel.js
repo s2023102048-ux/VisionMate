@@ -1,7 +1,70 @@
 'use client';
+import { useState, useEffect } from 'react';
 
 export default function SettingsPanel({ open, onClose }) {
+  const [profile, setProfile] = useState(null);
+
+  useEffect(() => {
+    let unsubscribe;
+    if (!open) return; // Only fetch if panel is open to save reads
+
+    (async () => {
+      const { initializeApp, getApps } = await import('firebase/app');
+      const { getAuth, onAuthStateChanged } = await import('firebase/auth');
+      const { getFirestore, doc, getDoc } = await import('firebase/firestore');
+
+      const FIREBASE_CONFIG = {
+        apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+        authDomain:        process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        projectId:         process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        storageBucket:     process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+        appId:             process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+      };
+
+      const app = getApps().length ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+
+      unsubscribe = onAuthStateChanged(auth, async (u) => {
+        if (u) {
+          try {
+            const snap = await getDoc(doc(db, 'users', u.uid));
+            if (snap.exists()) {
+              setProfile({ ...snap.data(), email: u.email, photoURL: u.photoURL || snap.data().photoURL });
+            } else {
+              setProfile({ name: u.displayName || 'VisionMate User', email: u.email, photoURL: u.photoURL });
+            }
+          } catch (e) {
+            console.error(e);
+            setProfile({ name: u.displayName || 'VisionMate User', email: u.email, photoURL: u.photoURL });
+          }
+        } else {
+          setProfile(null);
+        }
+      });
+    })();
+
+    return () => { if (unsubscribe) unsubscribe(); };
+  }, [open]);
+
+  const handleSignOut = async () => {
+    try {
+      const { initializeApp, getApps } = await import('firebase/app');
+      const { getAuth, signOut } = await import('firebase/auth');
+      const app = getApps()[0];
+      if (app) await signOut(getAuth(app));
+      onClose();
+      // Optional: force reload to reset state if needed
+      window.location.reload();
+    } catch (err) {
+      console.error('Sign out error:', err);
+    }
+  };
+
   if (!open) return null;
+
+  const initials = profile?.name ? profile.name.substring(0, 2).toUpperCase() : 'VM';
 
   return (
     <div
@@ -42,12 +105,20 @@ export default function SettingsPanel({ open, onClose }) {
 
         {/* Profile Section */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '15px', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-          <div style={{ width: 50, height: 50, borderRadius: '50%', background: 'linear-gradient(135deg, #7c4dff, #00e5ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', color: '#fff', fontWeight: 'bold' }}>
-            VM
-          </div>
+          {profile?.photoURL ? (
+            <img src={profile.photoURL} alt="Profile" style={{ width: 50, height: 50, borderRadius: '50%', objectFit: 'cover' }} />
+          ) : (
+            <div style={{ width: 50, height: 50, borderRadius: '50%', background: 'linear-gradient(135deg, #7c4dff, #00e5ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', color: '#fff', fontWeight: 'bold' }}>
+              {initials}
+            </div>
+          )}
           <div>
-            <p style={{ margin: '0 0 4px', fontSize: '1rem', fontWeight: 600, color: '#fff' }}>VisionMate User</p>
-            <p style={{ margin: 0, fontSize: '0.8rem', color: '#888' }}>Community Contributor</p>
+            <p style={{ margin: '0 0 4px', fontSize: '1rem', fontWeight: 600, color: '#fff' }}>
+              {profile?.name || 'Loading...'}
+            </p>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: '#888' }}>
+              {profile?.email || 'Community Contributor'}
+            </p>
           </div>
         </div>
 
@@ -97,7 +168,7 @@ export default function SettingsPanel({ open, onClose }) {
         </div>
 
         {/* Log Out */}
-        <button style={{
+        <button onClick={handleSignOut} style={{
           marginTop: '10px', width: '100%', padding: '14px',
           background: 'rgba(255,82,82,0.08)', border: '1px solid rgba(255,82,82,0.2)',
           borderRadius: '12px', color: '#ff5252', fontSize: '0.9rem', fontWeight: 600,
