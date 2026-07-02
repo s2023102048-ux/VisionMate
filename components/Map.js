@@ -29,7 +29,7 @@ function buildPopupHTML(report) {
   const ratingText    = report.rating ? ` — ${Number(report.rating).toFixed(1)}/5.0` : '';
 
   const photo = report.photoUrl
-    ? `<img src="${report.photoUrl}" alt="Report photo" class="popup-photo" loading="lazy" />`
+    ? `<img src="${report.photoUrl}" alt="Report photo" class="popup-photo" loading="lazy" style="cursor: zoom-in; transition: opacity 0.2s;" onmouseover="this.style.opacity=0.8" onmouseout="this.style.opacity=1" />`
     : `<div style="height:80px;background:var(--surface-hover);display:flex;align-items:center;justify-content:center;font-size:2rem;">📷</div>`;
 
   const ts = report.timestamp?.toDate
@@ -225,6 +225,49 @@ export default function Map({ reports, onMapClick, destination, routeCoords, onL
         marker.on('popupopen', (e) => {
           const popupNode = e.popup._contentNode;
           if (!popupNode) return;
+
+          // Photo expansion (Lightbox)
+          const photoImg = popupNode.querySelector('.popup-photo');
+          if (photoImg) {
+            photoImg.addEventListener('click', () => {
+              const overlay = document.createElement('div');
+              overlay.style.position = 'fixed';
+              overlay.style.inset = '0';
+              overlay.style.backgroundColor = 'rgba(0,0,0,0.85)';
+              overlay.style.backdropFilter = 'blur(4px)';
+              overlay.style.zIndex = '999999';
+              overlay.style.display = 'flex';
+              overlay.style.alignItems = 'center';
+              overlay.style.justifyContent = 'center';
+              overlay.style.cursor = 'zoom-out';
+              overlay.style.opacity = '0';
+              overlay.style.transition = 'opacity 0.2s ease';
+              
+              const img = document.createElement('img');
+              img.src = report.photoUrl;
+              img.style.maxWidth = '95vw';
+              img.style.maxHeight = '95vh';
+              img.style.objectFit = 'contain';
+              img.style.borderRadius = '12px';
+              img.style.boxShadow = '0 10px 40px rgba(0,0,0,0.5)';
+              img.style.transform = 'scale(0.95)';
+              img.style.transition = 'transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)';
+              
+              overlay.appendChild(img);
+              document.body.appendChild(overlay);
+              
+              // Trigger reflow for animation
+              void overlay.offsetWidth;
+              overlay.style.opacity = '1';
+              img.style.transform = 'scale(1)';
+              
+              overlay.addEventListener('click', () => {
+                overlay.style.opacity = '0';
+                img.style.transform = 'scale(0.95)';
+                setTimeout(() => document.body.removeChild(overlay), 200);
+              });
+            });
+          }
 
           // Delete button
           const btnDel = popupNode.querySelector('.btn-delete-report');
