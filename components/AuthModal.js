@@ -1,8 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { auth, googleProvider, db } from '../lib/firebase';
-import { signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth';
+import { app, db } from '../lib/firebase';
+import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+
+const auth = typeof window !== 'undefined' ? getAuth(app) : null;
+const googleProvider = typeof window !== 'undefined' ? new GoogleAuthProvider() : null;
 
 export default function AuthModal() {
   const [user, setUser] = useState(null);
