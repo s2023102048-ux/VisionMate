@@ -255,16 +255,17 @@ export default function HomePage() {
         let severity = 'Dangerous';
         let status = 'HAZARD';
         if (rating >= 4.5) { severity = 'Safe'; status = 'ACCESSIBLE'; }
-        else if (rating >= 3.5) severity = 'Minor';
+        else if (rating >= 3.5) { severity = 'Minor'; status = 'ACCESSIBLE'; }
         else if (rating >= 2.5) severity = 'Moderate';
 
         geminiResult = {
           status,
           severity,
           rating,
+          comment: parsed.comment || '',
           positive_features: parsed.positive_features || [],
           warnings: parsed.warnings || [],
-          description: `AI Accessibility Rating: ${rating}/5.0`
+          description: parsed.comment || `AI Accessibility Rating: ${rating}/5.0`
         };
       } catch (geminiErr) {
         console.error('Gemini error:', geminiErr);

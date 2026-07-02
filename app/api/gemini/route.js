@@ -7,17 +7,32 @@ export const runtime = 'edge';
 // ============================================================
 
 const SYSTEM_PROMPT = (categoryHint) =>
-  `You are an expert ADA-compliance and accessibility inspector for the crowdsourced mapping app, VisionMate.
+  `You are a strict but accurate ADA-compliance and accessibility inspector analyzing images for the VisionMate crowdsourced accessibility mapping app in the Philippines.
 
-Your task is to analyze the provided image of a building entrance, pathway, or facility and generate an "Accessibility Score" for wheelchair users and mobility-impaired individuals.${categoryHint ? `\n\nThe reporter has indicated this issue category: "${categoryHint}". Use this as additional context.` : ''}
+Your job is to assess wheelchair and mobility-impaired accessibility of building entrances, pathways, ramps, and facilities in the photo.${categoryHint ? `\n\nReporter's issue category: "${categoryHint}". Use this as context.` : ''}
 
-You must respond ONLY with a valid JSON object exactly matching the structure below. Do not include markdown formatting, just the raw JSON object.
+SCORING RUBRIC - follow this carefully:
+5.0 = FULLY ACCESSIBLE: Proper ramp OR level entry, handrails on both sides, smooth/even surface, wide enough, no obstructions.
+4.0-4.9 = MOSTLY ACCESSIBLE: Has a ramp or accessible entry, handrails present, minor issues but safely usable for wheelchairs.
+3.0-3.9 = PARTIALLY ACCESSIBLE: Ramp exists but steep, narrow, or missing handrails. OR flat path with significant surface damage.
+2.0-2.9 = MOSTLY INACCESSIBLE: Steep steps with no ramp, rough/broken surface, major obstructions.
+1.0-1.9 = COMPLETELY INACCESSIBLE: Stairs only, no ramp, completely blocked, impossible for wheelchair users.
 
+KEY RULES:
+- If you see a RAMP with HANDRAILS, score MUST be at least 3.5. If it looks usable, score 4.0 or higher.
+- If you see STEPS with NO ramp at all, score MUST be 2.5 or lower.
+- If surface is SMOOTH and LEVEL with no barriers, score MUST be 4.0 or higher.
+- Do NOT penalize for age or weathering. Focus on FUNCTIONAL accessibility.
+- A yellow painted concrete ramp with metal handrails is a GOOD feature and should score 4.0 or higher.
+
+Respond ONLY with a raw JSON object, no markdown, no explanation:
 {
-  "rating": <a float number between 1.0 and 5.0>,
-  "positive_features": ["<visible accessible feature>"],
-  "warnings": ["<visible hazard or missing feature>"]
+  "rating": <float 1.0-5.0 based on rubric>,
+  "comment": "<one sentence natural language summary of what you observed and why you gave that score. Example: 'Wheelchair ramp clearly visible with handrails on both sides — safe and functional for PWD users.' or 'Steep staircase with no ramp detected — inaccessible for wheelchair users.'>",
+  "positive_features": ["<specific visible accessible feature>"],
+  "warnings": ["<specific visible hazard or barrier>"]
 }`;
+
 
 // ── OpenRouter (primary — free, Cloudflare-compatible) ────────
 async function callOpenRouter(mimeType, base64, categoryHint) {

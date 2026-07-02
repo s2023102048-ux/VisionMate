@@ -172,6 +172,24 @@ export default function ReportModal({
                   )}
                 </div>
 
+                {/* AI Comment */}
+                {aiResult.comment && (
+                  <div id="ai-comment" style={{
+                    background: 'rgba(124,77,255,0.08)',
+                    border: '1px solid rgba(124,77,255,0.2)',
+                    borderRadius: '10px',
+                    padding: '10px 14px',
+                    marginTop: '10px',
+                  }}>
+                    <p style={{ fontSize: '0.75rem', fontWeight: 700, color: '#7c4dff', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 4px' }}>
+                      🤖 AI Observation
+                    </p>
+                    <p style={{ fontSize: '0.83rem', color: 'var(--text-muted)', lineHeight: 1.5, margin: 0 }}>
+                      {aiResult.comment}
+                    </p>
+                  </div>
+                )}
+
                 {/* Positive Features */}
                 {aiResult.positive_features?.length > 0 && (
                   <div className="ai-features" id="ai-features">
