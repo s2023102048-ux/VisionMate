@@ -238,17 +238,59 @@ export default function HomePage() {
       const categoryHint = category === 'Others' ? otherText : category;
       let geminiResult;
       try {
-        const res = await fetch('/api/inspect', {
-          method:  'POST',
+        const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+        if (!apiKey) throw new Error("No API Key");
+
+        const SYSTEM_PROMPT = `You are an expert ADA-compliance and accessibility inspector for the crowdsourced mapping app, VisionMate.
+
+Your task is to analyze the provided image of a building entrance, pathway, or facility and generate an "Accessibility Score" for wheelchair users and mobility-impaired individuals.${categoryHint ? `\n\nThe reporter has indicated this issue category: "${categoryHint}". Use this as additional context.` : ''}
+
+You must respond ONLY with a valid JSON object exactly matching the structure below. Do not include markdown formatting like \`\`\`json, just the raw JSON object.
+
+{
+  "rating": <a float number between 1.0 and 5.0 representing the overall accessibility score>,
+  "positive_features": [
+    <an array of strings listing visible accessible features. Examples: "Wide Entrance", "Wheelchair Ramp", "Flat Surface", "Elevator", "Accessible Restroom">
+  ],
+  "warnings": [
+    <an array of strings listing any visible hazards, difficulties, or missing features. Examples: "Steep incline", "Uneven pavement", "No handrails", "Blocked pathway">
+  ]
+}`;
+        const requestBody = {
+          contents: [{ parts: [{ text: SYSTEM_PROMPT }, { inline_data: { mime_type: mimeType, data: base64 } }] }],
+          generationConfig: { temperature: 0.1, maxOutputTokens: 512, responseMimeType: 'application/json' }
+        };
+
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body:    JSON.stringify({ base64, mimeType, category: categoryHint }),
+          body: JSON.stringify(requestBody)
         });
-        if (!res.ok) throw new Error(`API error: ${res.status}`);
-        geminiResult = await res.json();
-        if (geminiResult.error) throw new Error(geminiResult.error);
+
+        if (!res.ok) throw new Error(`Gemini API error: ${res.status}`);
+        
+        const data = await res.json();
+        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        let parsed = JSON.parse(rawText.replace(/```json/gi, '').replace(/```/g, '').trim());
+
+        const rating = parseFloat(parsed.rating) || 1.0;
+        let severity = 'Dangerous';
+        let status = 'HAZARD';
+        if (rating >= 4.5) { severity = 'Safe'; status = 'ACCESSIBLE'; }
+        else if (rating >= 3.5) severity = 'Minor';
+        else if (rating >= 2.5) severity = 'Moderate';
+
+        geminiResult = {
+          status,
+          severity,
+          rating,
+          positive_features: parsed.positive_features || [],
+          warnings: parsed.warnings || [],
+          description: `AI Accessibility Rating: ${rating}/5.0`
+        };
       } catch (geminiErr) {
         console.error('Gemini error:', geminiErr);
-        geminiResult = { status: 'HAZARD', severity: 'Dangerous', description: 'AI inspection unavailable — report saved manually.' };
+        geminiResult = { status: 'HAZARD', severity: 'Moderate', rating: 2.5, positive_features: [], warnings: ['AI inspection temporarily unavailable — report saved with manual review pending.'], description: 'AI inspection unavailable', fallback: true };
       }
       setAiStatus('done');
       setAiResult(geminiResult);
