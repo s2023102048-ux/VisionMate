@@ -95,11 +95,17 @@ You must respond ONLY with a valid JSON object exactly matching the structure be
     }
 
     if (!geminiResponse.ok) {
-      const err = await geminiResponse.json().catch(() => ({}));
-      return Response.json(
-        { error: err?.error?.message || `Gemini API error: ${lastStatus}` },
-        { status: lastStatus }
-      );
+      // Return a graceful fallback instead of crashing the UI
+      // This handles quota limits, location restrictions, etc.
+      return Response.json({
+        status:            'HAZARD',
+        severity:          'Moderate',
+        rating:            2.5,
+        positive_features: [],
+        warnings:          ['AI inspection temporarily unavailable — report saved with manual review pending.'],
+        description:       'AI inspection temporarily unavailable.',
+        fallback:          true,
+      });
     }
 
     const data    = await geminiResponse.json();
