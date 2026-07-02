@@ -290,7 +290,7 @@ export default function HomePage() {
       setLoadingVisible(false);
       showToast('❌ Something went wrong. Please try again.');
     }
-  }, [selectedLat, selectedLng, selectedFile, note, showToast, resetAndCleanup]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [selectedLat, selectedLng, selectedFile, category, otherText, showToast, resetAndCleanup]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFabClick = () => {
     setModalVisible(true);
