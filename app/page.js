@@ -5,7 +5,7 @@
 export const dynamic = 'force-dynamic';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import dynamic from 'next/dynamic';
+import loadDynamic from 'next/dynamic';
 
 import Header          from '../components/Header';
 import ReportModal     from '../components/ReportModal';
@@ -20,8 +20,9 @@ import AiStatusBar     from '../components/AiStatusBar';
 
 import { saveReport, listenToReports, uploadPhoto, deleteReport } from '../lib/firebase';
 
-const Map = dynamic(() => import('../components/Map'), { ssr: false });
-const AuthModal = dynamic(() => import('../components/AuthModal'), { ssr: false });
+const Map      = loadDynamic(() => import('../components/Map'),      { ssr: false });
+const AuthModal = loadDynamic(() => import('../components/AuthModal'), { ssr: false });
+
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
