@@ -153,10 +153,10 @@ export default function ReportModal({
                 {/* Severity badge + Rating */}
                 <div className="ai-result-header">
                   <div className={`result-badge severity-${(aiResult.severity || '').toLowerCase()}`} id="result-badge">
-                    {aiResult.severity === 'Safe'      && '🟢 Safe'}
-                    {aiResult.severity === 'Minor'     && '🟡 Minor'}
-                    {aiResult.severity === 'Moderate'  && '🟠 Moderate'}
-                    {aiResult.severity === 'Dangerous' && '🔴 Dangerous'}
+                    {aiResult.severity === 'Safe'      && `🟢 ${aiResult.category || 'Safe'}`}
+                    {aiResult.severity === 'Minor'     && `🟡 ${aiResult.category || 'Minor'}`}
+                    {aiResult.severity === 'Moderate'  && `🟠 ${aiResult.category || 'Moderate'}`}
+                    {aiResult.severity === 'Dangerous' && `🔴 ${aiResult.category || 'Dangerous'}`}
                     {!aiResult.severity && (aiResult.status === 'ACCESSIBLE' ? '✅ Accessible' : '⚠️ Hazard')}
                   </div>
                   {aiResult.rating != null && (

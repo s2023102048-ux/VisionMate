@@ -50,7 +50,7 @@ function buildPopupHTML(report) {
     <div class="popup-content">
       ${photo}
       <div class="popup-body">
-        <div class="popup-status severity-${cls}">${severityEmoji} ${severityLabel}${ratingText}</div>
+        <div class="popup-status severity-${cls}">${severityEmoji} ${report.category && report.category !== 'Others' ? report.category : severityLabel}${ratingText}</div>
         <p class="popup-desc">${report.description}</p>
         ${noteHtml}
         <span class="popup-time">🕐 ${ts}</span>

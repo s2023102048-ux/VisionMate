@@ -28,6 +28,7 @@ KEY RULES:
 Respond ONLY with a raw JSON object, no markdown, no explanation:
 {
   "rating": <float 1.0-5.0 based on rubric>,
+  "category": "<classify the image into one of these: 'Accessible Ramp', 'Accessible Entrance', 'Broken Sidewalk', 'No Ramp', 'Stairs Only', 'Flood', 'Construction', 'Blocked Sidewalk', 'Narrow Entrance', 'Pothole', or 'Others'>",
   "comment": "<one sentence natural language summary of what you observed and why you gave that score. Example: 'Wheelchair ramp clearly visible with handrails on both sides — safe and functional for PWD users.' or 'Steep staircase with no ramp detected — inaccessible for wheelchair users.'>",
   "positive_features": ["<specific visible accessible feature>"],
   "warnings": ["<specific visible hazard or barrier>"]

@@ -276,6 +276,7 @@ export default function HomePage() {
           status,
           severity,
           rating,
+          category: parsed.category || '',
           comment: parsed.comment || '',
           positive_features: parsed.positive_features || [],
           warnings: parsed.warnings || [],
@@ -307,7 +308,7 @@ export default function HomePage() {
           severity:    geminiResult.severity || 'Dangerous',
           rating:      geminiResult.rating   || null,
           description: geminiResult.description,
-          category:    category === 'Others' ? (otherText || 'Others') : (category || ''),
+          category:    category === 'Others' ? (otherText || 'Others') : (category || geminiResult.category || 'Others'),
         });
       } catch (firestoreErr) {
         console.error('Firestore error:', firestoreErr);
