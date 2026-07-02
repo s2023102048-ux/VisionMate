@@ -72,17 +72,32 @@ You must respond ONLY with a valid JSON object exactly matching the structure be
       },
     };
 
-    const geminiResponse = await fetch(GEMINI_URL, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(requestBody),
-    });
+    // Retry logic: up to 3 attempts, 3s wait on 429
+    const MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+    let geminiResponse;
+    let lastStatus = 0;
+
+    for (const model of MODELS) {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        geminiResponse = await fetch(url, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify(requestBody),
+        });
+        lastStatus = geminiResponse.status;
+        if (geminiResponse.status !== 429) break;
+        // Rate limited — wait 3s before retry
+        await new Promise(r => setTimeout(r, 3000));
+      }
+      if (geminiResponse.status !== 429) break;
+    }
 
     if (!geminiResponse.ok) {
       const err = await geminiResponse.json().catch(() => ({}));
       return Response.json(
-        { error: err?.error?.message || `Gemini API error: ${geminiResponse.status}` },
-        { status: geminiResponse.status }
+        { error: err?.error?.message || `Gemini API error: ${lastStatus}` },
+        { status: lastStatus }
       );
     }
 
