@@ -45,6 +45,7 @@ async function callOpenRouter(mimeType, base64, categoryHint) {
     process.env.OPENROUTER_API_KEY_4,
     process.env.OPENROUTER_API_KEY_5,
     process.env.OPENROUTER_API_KEY_6,
+    process.env.OPENROUTER_API_KEY_7,
   ].filter(Boolean);
 
   if (keys.length === 0) throw new Error('No OPENROUTER_API_KEY set');
